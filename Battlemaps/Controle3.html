@@ -1,0 +1,1696 @@
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1" />
+
+    <style>
+        .bigbutton {
+            background-color: #e7dfc6;
+            text-align: center;
+        }
+
+        textarea {
+            font-family: monospace;
+            width: 100%;
+            background-color: #f3efe2;
+            font-size: 90%;
+        }
+    </style>
+
+    <link type="text/css" href="http://www.pathfinder-fr.org/Wiki/public/upload/Battlemaps/Fichiers/jQuery/jquery-ui-1.8.11.custom.css" rel="stylesheet" />
+    <script type="text/javascript" src="http://www.pathfinder-fr.org/Wiki/public/upload/Battlemaps/Fichiers/jQuery/jquery-1.4.4.min.js"></script>
+    <script type="text/javascript" src="http://www.pathfinder-fr.org/Wiki/public/upload/Battlemaps/Fichiers/jQuery/jquery-ui-1.8.11.custom.min.js"></script>
+
+    <script style="text/javascript">
+
+        function loaded() {
+            main = window.opener;
+            $(".cbmapbut").each(function () { initbutton(this, 24); });
+            // INITIALISATION
+            /* Constantes */
+            defaultsrc = "http://www.pathfinder-fr.org/wiki/public/upload/Battlemaps/tetetest.png";
+            dejajoue = true;
+            doitjouer = false;
+            mort = 0;
+            normal = 1;
+            ausol = 2;
+            inconscient = 3;
+            invisible = 4;
+            etatdesc = new Array();
+            etatdesc[0] = "mort";
+            etatdesc[1] = "normal";
+            etatdesc[2] = "au sol";
+            etatdesc[3] = "inconscient";
+            etatdesc[4] = "invisible";
+            cercle = 0;
+            cone = 1;
+            rectangle = 2;
+            aura = 3;
+            typezonedesc = new Array();
+            typezonedesc[0] = "cercle";
+            typezonedesc[1] = "cone";
+            typezonedesc[2] = "rectangle";
+            typezonedesc[3] = "aura";
+
+            afficheinvis = false;
+
+            main.loaded(1);
+        }
+
+        $(loaded);
+
+        function init() {
+            fbmap = main.fbmap;
+            battlemap = new Battlemap();
+            if (main.bdesc != "") {
+                var bmaptemp = JSON.parse(main.bdesc);
+                battlemap.src = bmaptemp.src;
+                battlemap.taillex = bmaptemp.taillex;
+                battlemap.tailley = bmaptemp.tailley;
+                battlemap.nelems = bmaptemp.nelems;
+                battlemap.nzones = bmaptemp.nzones;
+                battlemap.nobjets = bmaptemp.nobjets;
+                for (var i = 0; i < battlemap.nelems; i++) {
+                    var item = bmaptemp.elems[i];
+                    if (item.visible == undefined)
+                        item.visible = true;
+                    battlemap.elems[i] = new Elem(i, item.nom, item.src, item.posx, item.posy, item.taillex, item.tailley, item.ordre, item.pv,
+                                                   item.pvmax, item.joue, item.etat, item.lien, item.notes, item.visible);
+                }
+                for (var i = 0; i < battlemap.nzones; i++) {
+                    var item = bmaptemp.zones[i];
+                    if (item.visible == undefined)
+                        item.visible = true;
+                    battlemap.zones[i] = new Zone(i, item.nom, item.type, item.src, item.coul, item.opac, item.posx, item.posy, item.taillex,
+                                                   item.tailley, item.rot, item.notes, item.visible);
+                }
+                for (var i = 0; i < battlemap.nobjets; i++) {
+                    var item = bmaptemp.objets[i];
+                    if (item.visible == undefined)
+                        item.visible = true;
+                    battlemap.objets[i] = new Objet(i, item.nom, item.src, item.posx, item.posy, item.taillex, item.tailley, item.opac, item.notes, item.visible);
+                }
+            }
+            main.battlemap = battlemap;
+            listeJetons();
+        }
+
+
+        /*******/
+        /* MAP */
+        /*******/
+
+        function editmap() {
+            main.idxmvt = -1;
+            main.idxzmvt = -1;
+            main.idxomvt = -1;
+            var contenu = "<table>";
+            contenu += "<tr><td>Image</td><td><input id='isrc' type='text' value='" + battlemap.src + "'/></td>";
+            contenu += "<td rowspan=3 style='text-align: right'><img class='cbmapbut2' id='bmok' title='Valider' pic='bok' act='validemap();'/></td></tr>";
+            contenu += "<tr><td>Taille-x</td><td><input id='itaillex' type='text' value='" + battlemap.taillex + "'/></td></tr>";
+            contenu += "<tr><td>Taille-y</td><td><input id='itailley' type='text' value='" + battlemap.tailley + "'/></td></tr>";
+            contenu += "<tr><td colspan=3 width=380px><img id='iimg' width=400px src='" + battlemap.src + "'/></td></tr>";
+            contenu += "</table>";
+            changedivcontrol(contenu, editmapsuite);
+        }
+
+        function editmapsuite() {
+            $("#isrc").change(modifsrcmap);
+        }
+
+        function modifsrcmap() {
+            $("#iimg").attr("src", $("#isrc").val());
+        }
+
+        function validemap() {
+            var nsrc = $("#isrc").val();
+            var ntaillex = parseInt($("#itaillex").val());
+            var ntailley = parseInt($("#itailley").val());
+            if (isNaN(ntaillex) || isNaN(ntailley))
+                alert("Les tailles en x et en y doivent être supérieures ou égales à 1.");
+            else if ((ntaillex < 1) || (ntailley < 1))
+                alert("Les tailles en x et en y doivent être supérieures ou égales à 1.");
+            else {
+                fbmap.ajustebmap(nsrc, ntaillex, ntailley);
+                listeJetons();
+            }
+        }
+
+        /*********/
+        /* ZOOM  */
+        /*********/
+
+        function choisitZoom() {
+            main.idxmvt = -1;
+            main.idxzmvt = -1;
+            main.idxomvt = -1;
+            var contenu = "<table><tr style='vertical-align: middle'><td>Taille des cases</td>";
+            contenu += "<td><input id='izoom' type='text' value='" + main.zoom + "' /></td>";
+            contenu += "<td><img class='cbmapbut2' id='btzoom' title='Appliquer' pic='bok' act=''/></td></tr>";
+            contenu += "<tr><td colspan='3' style='text-align: center'>";
+            contenu += "<button id='bzoom1' type='button'>10 px</button> ";
+            contenu += "<button id='bzoom2' type='button'>20 px</button> ";
+            contenu += "<button id='bzoom3' type='button'>36 px</button> ";
+            contenu += "<button id='bzoom4' type='button'>72 px</button>";
+            contenu += "<button id='btaj' type='button'>Ajuster</button></td></tr>";
+            contenu += "<tr><td colspan='3'><center><div id='sliderzoom'></div>";
+            contenu += "</center></td></tr>";
+            contenu += "<tr><td colspan='3' id='tcomment' style='font-style:italic; text-align: center'></td></tr></table>";
+            changedivcontrol(contenu, choisitZoomsuite);
+        }
+
+        function choisitZoomsuite() {
+            $("#btzoom").click(ajusteZoom);
+            $("#btaj").click(function () { main.zoom = fbmap.calculeZoom(); fbmap.affichebmap(); choisitZoom(); });
+            $("#bzoom1").click(function () { main.zoom = 10; fbmap.affichebmap(); choisitZoom(); });
+            $("#bzoom2").click(function () { main.zoom = 20; fbmap.affichebmap(); choisitZoom(); });
+            $("#bzoom3").click(function () { main.zoom = 36; fbmap.affichebmap(); choisitZoom(); });
+            $("#bzoom4").click(function () { main.zoom = 72; fbmap.affichebmap(); choisitZoom(); });
+            var fchange = function () { main.zoom = $("#sliderzoom").slider("option", "value"); fbmap.affichebmap(); $("#izoom").val(main.zoom); };
+            $("#sliderzoom").slider({ min: 1, max: 100, value: main.zoom, animate: true, change: fchange });
+        }
+
+        function ajusteZoom() {
+            var nzoom = parseInt($("#izoom").val());
+            if (isNaN(nzoom))
+                $("#tcomment").html("Valeur incorrecte (on attend un entier)");
+            else {
+                main.zoom = nzoom;
+                fbmap.affichebmap();
+            }
+        }
+
+        /***********/
+        /* CONFIG  */
+        /***********/
+
+        function configuration() {
+            var contenu = "<table><tr style='vertical-align: middle'>";
+            contenu += "<td>Opacité damier : </td>";
+            contenu += "<td width='200px'><div style='margin:10px' id='slideropac'></div></td>";
+            contenu += "<td id='vopac'>" + (100 * main.opacgrille) + "%</td>";
+            contenu += "<tr><td colspan=3 style='text-align: center'>(valeur standard : 25%)</td></tr>";
+            contenu += "<tr height='10px'><td>&nbsp;</td></tr>";
+            contenu += "<tr><td colspan=3>";
+            contenu += "<input type='checkbox' id='ainv' onchange='modifainv();'/> Afficher les jetons invisibles</td></tr>";
+            contenu += "</tr></table>";
+            changedivcontrol(contenu, configurationsuite);
+        }
+
+        function configurationsuite() {
+            var fchange = function () {
+                main.opacgrille = $("#slideropac").slider("option", "value") / 200.0;
+                $("#vopac").html("" + (100 * main.opacgrille) + "%");
+                fbmap.ajusteopacgrille();
+            };
+            $("#slideropac").slider({ min: 0, max: 200, value: Math.floor(main.opacgrille * 200), animate: true, change: fchange });
+            $("#ainv").attr("checked", afficheinvis);
+        }
+
+        function modifainv() {
+            afficheinvis = !afficheinvis;
+            $("#ainv").attr("checked", afficheinvis);
+        }
+
+        /********/
+        /* CODE */
+        /********/
+
+        function afficheCode() {
+            idxmvt = -1;
+            idxzmvt = -1;
+            idxomvt = -1;
+            var bcopy = new Battlemap();
+            bcopy.src = battlemap.src;
+            bcopy.taillex = battlemap.taillex;
+            bcopy.tailley = battlemap.tailley;
+            bcopy.nelems = battlemap.nelems;
+            bcopy.nzones = battlemap.nzones;
+            bcopy.nobjets = battlemap.nobjets;
+            for (var i = 0; i < battlemap.nelems; i++) {
+                var item = battlemap.elems[i];
+                bcopy.elems[i] = new Elem(i, item.nom, item.src, item.posx, item.posy, item.taillex, item.tailley,
+                                                      item.ordre, item.pv, item.pvmax, item.joue, item.etat, item.lien, item.notes, item.visible);
+            }
+            for (var i = 0; i < battlemap.nzones; i++) {
+                var item = battlemap.zones[i];
+                bcopy.zones[i] = new Zone(i, item.nom, item.type, item.src, item.coul, item.opac, item.posx, item.posy,
+                                                      item.taillex, item.tailley, item.rot, item.notes, item.visible);
+            }
+            for (var i = 0; i < battlemap.nobjets; i++) {
+                var item = battlemap.objets[i];
+                bcopy.objets[i] = new Objet(i, item.nom, item.src, item.posx, item.posy, item.taillex, item.tailley,
+                                                      item.opac, item.notes, item.visible);
+            }
+            var contenu = "<textarea rows=36 id='tacode'>";
+            contenu += "{s:01Battlemap}<nowiki>\n";
+            contenu += "bdesc += '";
+            contenu += JSON.stringify(bcopy).replace(/'/g, "00GUI00").replace(/\\/g, "\\\\");
+            contenu += "';\n</nowiki>{s:01BattlemapFin}\n";
+            contenu += "</textarea>";
+            changedivcontrol(contenu, function () { });
+        }
+
+        /********************/
+        /* LISTE DES JETONS */
+        /********************/
+
+        function listeJetons() {
+            main.idxmvt = -1;
+            main.idxzmvt = -1;
+            main.idxomvt = -1;
+            var tabordre = new Array();
+            for (var i = 0; i < battlemap.nelems; i++) tabordre[i] = i;
+            for (var i = 0; i < battlemap.nelems - 1; i++)
+                for (var j = battlemap.nelems - 1; j > i; j--) {
+                    var swap;
+                    var elem1 = battlemap.elems[tabordre[j - 1]];
+                    var elem2 = battlemap.elems[tabordre[j]];
+                    if (main.tridefaut == 0)
+                        swap = elem1.getordre() < elem2.getordre();
+                    if (main.tridefaut == 1)
+                        swap = elem1.nom > elem2.nom;
+                    if (swap) {
+                        var tmp = tabordre[j - 1];
+                        tabordre[j - 1] = tabordre[j];
+                        tabordre[j] = tmp;
+                    }
+                }
+            var contenu = "<table style='border: 1px solid black'>";
+            var naffiche = 0;
+            for (var i = 0; i < battlemap.nelems; i++) {
+                if (afficheinvis || battlemap.elems[tabordre[i]].visible) {
+                    if (naffiche > 0)
+                        contenu += "<tr class='trjetonl" + tabordre[i] + "'><td colspan=6 style='background-color: black; padding: 1px'></td></tr>";
+                    naffiche += 1;
+                    contenu += afficheUnJeton(tabordre[i]);
+                }
+            }
+            if (naffiche == 0)
+                if (battlemap.nelems == 0)
+                    contenu = "<tr><td class='bigbutton'>Aucun jeton</td></tr>";
+                else
+                    contenu = "<tr><td class='bigbutton'>Aucun jeton visible</td></tr>";
+            contenu += "</table>";
+            changedivcontrol(contenu, function () { });
+        }
+
+        function afficheUnJeton(idx) {
+            var currelem = battlemap.elems[idx];
+            var scurrelem = "battlemap.elems[" + idx + "].";
+            var contenu = "<tr class='trjeton" + idx + "' style='vertical-align: middle";
+            if (!currelem.visible)
+                contenu += "; background-color: #cccccc";
+            contenu += "'>";
+            // IMAGE JETON
+            contenu += "<td ROWSPAN=2><img style='width:56px; height:56px' id='img" + idx + "' src='" + currelem.src + "'";
+            contenu += "onclick='modifJeton(" + idx + ");' onmouseover='" + scurrelem + "illumine();'";
+            contenu += "onmouseout='" + scurrelem + "desillumine();' title='" + currelem.pv + "/" + currelem.pvmax + "' /></td>";
+            // NOM ET POINTS DE VIE
+            contenu += "<td style='padding: 2px' title='" + currelem.pv + "/" + currelem.pvmax + "'>";
+            contenu += "<div style='color: #fff; position: relative; background-color: #000'>";
+            contenu += "<div style='background-color: transparent; color: #fff; font-weight: bold; padding: 2px 4px 2px 4px'>";
+            contenu += currelem.nom + "</div>";
+            var pvquota = currelem.pv > 0 ? Math.floor(currelem.pv / currelem.pvmax * 100) : 0;
+            contenu += "<div style='position: absolute; z-index: 10; left: 0; top: 0; height:100%; background-color:";
+            if (pvquota > 55)
+                contenu += "#339900";
+            else if (pvquota > 25)
+                contenu += "#FF8800";
+            else if (pvquota > 0)
+                contenu += "#FF0033";
+            else
+                contenu += "#330000";
+            contenu += "; width:" + pvquota + "%'></div>";
+            contenu += "<div style='position: absolute; z-index: 20; left: 0; top: 0; background-color: transparent; color: #fff;";
+            contenu += "font-weight: bold; padding: 2px 4px 2px 4px'>" + currelem.nom + "</div>";
+            contenu += "</div>";
+            contenu += "</td>";
+            // VISIBILITÉ
+            contenu += "<td><img class='cbmapbut2' id='bvis" + idx + "' title='Cacher/afficher ce jeton' pic='b";
+            if (!currelem.visible) contenu += "no";
+            contenu += "eye' act='modVis(" + idx + ");'/></td>";
+            // INITIATIVE
+            contenu += "<td style='padding: 2px 4px 2px 4px'>Init : ";
+            if (currelem.ordre != currelem.getordre())
+                contenu += currelem.getordre() + " (" + currelem.ordre + ")";
+            else
+                contenu += currelem.ordre;
+            contenu += "</td>";
+            // A JOUÉ
+            contenu += "<td  style='padding: 2px 4px 2px 4px; font-size: small' id='joue" + idx + "'";
+            contenu += "onclick='modifieJoue(" + idx + ");' >";
+            if (currelem.joue)
+                contenu += "<span style='color: gray'>Déjà joué</span>";
+            else
+                contenu += "Doit jouer";
+            contenu += "</td>";
+            // SUPPRIMER
+            contenu += "<td><img class='cbmapbut2' id='bkill" + idx + "' title='Supprimer ce jeton' pic='bkill'";
+            contenu += "act='supprimeJeton(" + idx + ");'/></td>";
+            // PV
+            contenu += "</tr><tr class='trjeton" + idx + "' style='vertical-align: middle";
+            if (!currelem.visible)
+                contenu += "; background-color: #cccccc";
+            contenu += "'>";
+            contenu += "<td style='padding: 2px 4px 2px 4px'>pv " + currelem.pv + "/" + currelem.pvmax + "</td>";
+            // ÉTAT
+            contenu += "<td colspan='2' style='padding: 2px 4px 2px 4px'>État : " + etatdesc[currelem.etat] + "</td>";
+            // ÉDITER, AURA, LIEN
+            contenu += "<td style='padding: 2px 4px 2px 4px'><img class='cbmapbut2' id='bedit" + idx + "' title='Éditer ce jeton' pic='bedit'";
+            contenu += "act='modifJeton(" + idx + ");'/>";
+            contenu += "<img class='cbmapbut2' id='baura" + idx + "' title='Ajouter une aura à ce jeton' pic='baura'";
+            contenu += "act='ajoutAuraJeton(" + idx + ");' />";
+            if (currelem.lien && (currelem.lien != "")) {
+                contenu += "<img class='cbmapbut2' id='blien" + idx + "' title='Ouvrir le lien associé à ce jeton', pic='blien'";
+                contenu += "act='window.open(\"" + currelem.lien + "\",\"annexe\",";
+                contenu += "\"scrollbars=yes,resizable=yes,directories=no,location=no,menubar=no,left=50,top=50\");'/>";
+            }
+            contenu += "</td>";
+            // DUPLIQUER
+            contenu += "<td><img class='cbmapbut2' id='bcopy" + idx + "' title='Dupliquer ce jeton' pic='bcopy'";
+            contenu += "act='dupJeton(" + idx + ",0);'/></td></tr>";
+            return contenu;
+        }
+
+        function modVis(idx) {
+            var elem = battlemap.elems[idx];
+            elem.visible = !elem.visible;
+            elem.ajustevisible();
+            if (elem.visible) {
+                $(".trjeton" + idx).css("background-color", "transparent");
+                $("#bvis" + idx).attr("src", "Boutons/beye.jpg");
+            } else {
+                if (afficheinvis) {
+                    $(".trjeton" + idx).css("background-color", "#cccccc");
+                    $("#bvis" + idx).attr("src", "Boutons/bnoeye.jpg");
+                } else {
+                    $(".trjeton" + idx).hide();
+                    $(".trjetonl" + idx).hide();
+                }
+            }
+        }
+
+        function nouveauRound() {
+            for (var i = 0; i < battlemap.nelems; i++)
+                battlemap.elems[i].joue = false;
+            listeJetons();
+        }
+
+        function modifieJoue(idx) {
+            var currelem = battlemap.elems[idx];
+            currelem.joue = !currelem.joue;
+            if (currelem.joue)
+                $("#joue" + idx).html("<span style='color: gray'>A déjà joué</span>");
+            else
+                $("#joue" + idx).html("Doit jouer");
+        }
+
+        function dupJeton(idx, type) {
+            var oelem = battlemap.elems[idx];
+            var nidx = battlemap.nelems;
+            battlemap.elems[nidx] =
+              new Elem(nidx, nvnom(oelem.nom, nidx, battlemap.elems), oelem.src, oelem.posx, oelem.posy, oelem.taillex,
+                              oelem.tailley, oelem.ordre, oelem.pv, oelem.pvmax,
+                              oelem.joue, oelem.etat, oelem.lien, oelem.notes, oelem.visible);
+            battlemap.nelems++;
+            battlemap.elems[battlemap.nelems - 1].installe();
+            if (type == 1)
+                modifJeton(nidx)
+            else
+                listeJetons();
+        }
+
+        function supprimeJeton(idx) {
+            main.idxmvt = -1;
+            main.idxzmvt = -1;
+            main.idxomvt = -1;
+            var answer = confirm("Voulez-vous vraiment supprimer " + battlemap.elems[idx].nom + " ?");
+            if (answer) {
+                battlemap.elems[idx].efface();
+                for (var i = idx; i < battlemap.nelems - 1; i++) {
+                    battlemap.elems[i] = battlemap.elems[i + 1];
+                    battlemap.elems[i].ajusteidx(i);
+                }
+                battlemap.nelems--;
+                listeJetons();
+            }
+        }
+
+        function ajoutJeton() {
+            battlemap.elems[battlemap.nelems] =
+              new Elem(battlemap.nelems, "Nouveau jeton", defaultsrc, 0, 0, 1, 1,
+                             0, 1, 1, false, normal, "", "", true);
+            battlemap.elems[battlemap.nelems].installe();
+            battlemap.nelems++;
+            modifJeton(battlemap.nelems - 1);
+        }
+
+        /********************/
+        /* ÉDITION DE JETON */
+        /********************/
+
+        function modifJeton(idx) {
+            main.idxmvt = -1;
+            main.idxzmvt = -1;
+            main.idxomvt = -1;
+            var currelem = battlemap.elems[idx];
+            var scurrelem = "battlemap.elems[" + idx + "].";
+            var maj = "onchange='majJeton(" + idx + ");' ";
+            var contenu = "<table style='border: 1px solid black'><tr style='vertical-align: top'>";
+            contenu += "<td>Nom</td><td><input " + maj + "id='inom' type='text' value='" + currelem.nom.replace(/'/g, "&apos;") + "'/></td>";
+            contenu += "<td ROWSPAN='7' style='background-color: black; padding: 0.5px'></td>";
+            contenu += "<td COLSPAN=2><input type='checkbox' id='cvis' onchange='modifVis(" + idx + ");'/> vis</td>";
+            contenu += "<td ROWSPAN='7' style='background-color: black; padding: 0.5px'></td>";
+            contenu += "<td ROWSPAN=3 COLSPAN=2><img id='iimg' style='width:72px; height: 72px' src='" + currelem.src + "'";
+            contenu += "onclick='modifImage(" + idx + ");' /></td>";
+            contenu += "<td><img class='cbmapbut2' id='bkill' title='Supprimer le jeton' pic='bkill' act='supprimeJeton(" + idx + ");'/></td>";
+            contenu += "</tr><tr>";
+            contenu += "<td>Lien</td><td><input " + maj + "id='ilien' type='text' value='" + currelem.lien + "'/></td>";
+            contenu += "<td COLSPAN=2class='bigbutton'><center>Liens</center></td>";
+            contenu += "<td><img class='cbmapbut2' id='baura' title='Ajouter une aura à ce jeton' pic='baura' act='ajoutAuraJeton(" + idx + ");'/></td>";
+            contenu += "</tr><tr>";
+            contenu += "<td>Init</td><td><input " + maj + "id='iordre' type='text' value='" + currelem.ordre + "'/></td>";
+            if (currelem.lien && (currelem.lien != "")) {
+                contenu += "<td><img class='cbmapbut2' id='blien' title='Ouvrir le lien associé au jeton' pic='blien'";
+                contenu += "act='window.open(\"" + currelem.lien + "\",\"annexe\",\"scrollbars=yes,resizable=yes,directories=no,location=no,menubar=no,left=50,top=50\");'/></td>";
+            } else {
+                contenu += "<td></td>";
+            }
+            contenu += "<td><img class='cbmapbut2' id='bbest' title='Ouvrir le Bestiaire Pathfinder' pic='bbest'";
+            contenu += "act='window.open(\"http://www.pathfinder-fr.org/Wiki/Pathfinder-RPG.Monstres.ashx\",\"annexe\",\"scrollbars=yes,resizable=yes,directories=no,location=no,menubar=no,left=50,top=50\");'/></td>";
+            contenu += "<td><img class='cbmapbut2' id='bcopy' title='Dupliquer le jeton' pic='bcopy' act='dupJeton(" + idx + ",1);'/></td>";
+            contenu += "</tr><tr>";
+            contenu += "<td>pv</td><td><input " + maj + "id='ipv' type='text' value='" + currelem.pv + "'/></td>";
+            contenu += "<td COLSPAN=2 class='bigbutton'><center>Taille</center></td>";
+            contenu += "<td COLSPAN='3'class='bigbutton'><center>Position</center></td>";
+            contenu += "</tr><tr>";
+            contenu += "<td>pv max</td><td><input " + maj + "id='ipvmax' type='text' value='" + currelem.pvmax + "'/></td>";
+            contenu += "<td COLSPAN=2><center><img class='cbmapbut2' id='tailleh' title='réduire la hauteur' pic='bmoins' act='" + scurrelem + "taille(0,-1);'/></center></td>";
+            contenu += "<td><img class='cbmapbut2' id='poshg' title='vers le haut et la gauche' pic='bmnw' act='" + scurrelem + "deplace(-1,-1);'/></td>";
+            contenu += "<td><img class='cbmapbut2' id='posh' title='vers le haut' pic='bmn' act='" + scurrelem + "deplace(0,-1);'/></td>";
+            contenu += "<td><img class='cbmapbut2' id='poshd' title='vers le haut et la droite' pic='bmne' act='" + scurrelem + "deplace(1,-1);'/></td>";
+            contenu += "</tr><tr>";
+            contenu += "<td>État</td><td><select " + maj + "id='setat'>";
+            contenu += "<option value='Mort'>Mort</option>";
+            contenu += "<option value='Normal'>Normal</option>";
+            contenu += "<option value='Sur le sol'>Sur le sol</option>";
+            contenu += "<option value='Inconscient'>Inconscient</option>";
+            contenu += "<option value='Invisible'>Invisible</option>";
+            contenu += "</select></td>";
+            contenu += "<td><center><img class='cbmapbut2' id='tailleg' title='réduire la largeur' pic='bmoins' act='" + scurrelem + "taille(-1,0);'/></center></td>";
+            contenu += "<td><center><img class='cbmapbut2' id='tailled' title='augmenter la largeur' pic='bplus' act='" + scurrelem + "taille(1,0);'/></center></td>";
+            contenu += "<td><img class='cbmapbut2' id='posg' title='vers la gauche' pic='bmw' act='" + scurrelem + "deplace(-1,0);'/></td>";
+            contenu += "<td><img class='cbmapbut2' id='posdirect' title='vers une case sélectionnée' pic='bmove' act='mvtdirect(" + idx + ");'/></td>";
+            contenu += "<td><img class='cbmapbut2' id='posd' title='vers la droite' pic='bme' act='" + scurrelem + "deplace(1,0);'/></td>";
+            contenu += "</tr><tr>";
+            contenu += "<td></td><td></td>";
+            contenu += "<td COLSPAN=2 style='text-align:center'><img class='cbmapbut2' id='tailleb' title='augmenter la hauteur' pic='bplus' act='" + scurrelem + "taille(0,1);'/></td>";
+            contenu += "<td><img class='cbmapbut2' id='posbg' title='vers le bas et la gauche' pic='bmsw' act='" + scurrelem + "deplace(-1,1);'/></td>";
+            contenu += "<td><img class='cbmapbut2' id='posb' title='vers le bas' pic='bms' act='" + scurrelem + "deplace(0,1);'/></td>";
+            contenu += "<td><img class='cbmapbut2' id='posbd' title='vers le bas et la droite' pic='bmse' act='" + scurrelem + "deplace(1,1);'/></td>";
+            contenu += "</tr><tr>";
+            contenu += "<tr><td colspan=9><textarea " + maj + "id='tnotes' cols='50' rows='8'>" + currelem.notes + "</textarea></td></tr>";
+            contenu += "<tr><td colspan=9 style='background-color: black; padding: 1px'></td></tr>";
+            contenu += "<tr><td colspan=9 id='comment' style='font-style:italic; font-size: small'>Modifiez les valeurs ci-dessous</td></tr>";
+            contenu += "</table>";
+            changedivcontrol(contenu, function () { modifJetonsuite(idx); });
+        }
+
+        function modifJetonsuite(idx) {
+            var currelem = battlemap.elems[idx];
+            $("#cvis").attr("checked", currelem.visible);
+            $("#setat").attr("selectedIndex", currelem.etat);
+        }
+
+        function modifVis(idx) {
+            main.idxmvt = -1;
+            main.idxzmvt = -1;
+            main.idxomvt = -1;
+            var currelem = battlemap.elems[idx];
+            currelem.visible = $("#cvis").attr("checked");
+            currelem.ajustevisible();
+        }
+
+        function mvtdirect(idx) {
+            $("#comment").html("Cliquez sur la case de la nouvelle position.");
+            if (!main.grille) fbmap.grilleAction();
+            main.idxmvt = idx;
+            main.idxzmvt = -1;
+            main.idxomvt = -1;
+        }
+
+        function modifImage(idx) {
+            main.idxmvt = -1;
+            main.idxzmvt = -1;
+            main.idxomvt = -1;
+            var currelem = battlemap.elems[idx];
+            var nsrc = prompt("Entrez l'adresse de la nouvelle image.", currelem.src);
+            if (nsrc != null) {
+                currelem.src = nsrc;
+                currelem.img.attr("src", nsrc);
+                $("#iimg").attr("src", nsrc);
+            }
+        }
+
+        function majJeton(idx) {
+            main.idxmvt = -1;
+            main.idxzmvt = -1;
+            main.idxomvt = -1;
+            var currelem = battlemap.elems[idx];
+            $("#comment").html("Modification enregistrée");
+            currelem.ajustenom($("#inom").val());
+            var val = parseFloat($("#iordre").val());
+            if (isNaN(val)) {
+                $("#comment").html("Ordre incorrect (on attend un réel).");
+                $("#iordre").val("" + currelem.ordre);
+            } else {
+                currelem.ordre = val;
+            }
+            val = parseInt($("#ipv").val());
+            if (isNaN(val)) {
+                $("#comment").html("Pv incorrect (on attend un entier).");
+                $("#ipv").val("" + currelem.pv);
+            } else {
+                currelem.ajustepv(val);
+            }
+            val = parseInt($("#ipvmax").val());
+            if (isNaN(val)) {
+                $("#comment").html("Pv max incorrect (on attend un entier).");
+                $("#ipvmax").val("" + currelem.pvmax);
+            } else {
+                currelem.ajustepvmax(val);
+            }
+            currelem.etat = $("#setat").attr("selectedIndex");
+            currelem.lien = $("#ilien").val();
+            currelem.notes = $("#tnotes").val();
+            if (currelem.lien == "") {
+                $("#blien").css("display", "none");
+                $("#blien").css("visibility", "hidden");
+            }
+            else {
+                $("#blien").click(function () { window.open(currelem.lien, 'annexe', 'scrollbars=yes,resizable=yes,directories=no,location=no,menubar=no,left=50,top=50'); });
+                $("#blien").css("display", "");
+                $("#blien").css("visibility", "visible");
+            }
+            currelem.ajusteetat();
+        }
+
+        /********************/
+        /* LISTE DES OBJETS */
+        /********************/
+
+        function listeObjets() {
+            main.idxmvt = -1;
+            main.idxzmvt = -1;
+            main.idxomvt = -1;
+            var contenu = "<table style='border: 1px solid black'>";
+            if (battlemap.nobjets == 0)
+                contenu += "<tr><td class='bigbutton'>Aucun objet</td></tr>";
+            for (var i = 0; i < battlemap.nobjets; i++) {
+                var currobjet = battlemap.objets[i];
+                var scurrobjet = "battlemap.objets[" + i + "].";
+                var maj = "onchange='majObjet(" + i + ");' ";
+                if (i > 0)
+                    contenu += "<tr><td colspan=10 style='background-color: black; padding: 1px'></td></tr>";
+                contenu += "<tr>";
+                contenu += "<td>Nom</td><td><input " + maj + "id='nom" + i + "' type='text' value='" + currobjet.nom.replace(/'/g, "&apos;") + "'/></td>";
+                contenu += "<td ROWSPAN='7' style='background-color: black; padding: 0.5px'></td>";
+                contenu += "<td><center><img class='cbmapbut2' id='bup" + i + "' title='Placer plus haut' pic='bmn' act='modobjordre(" + i + ",-1);'/>";
+                contenu += "<img class='cbmapbut2' id='bupup" + i + "' title='Placer beaucoup plus haut' pic='bupup' act='modobjordre(" + i + ",-5);'/></center></td>";
+                contenu += "<td ROWSPAN='7' style='background-color: black; padding: 0.5px'></td>";
+                contenu += "<td COLSPAN=2 ROWSPAN=2><img style='width:50px; height:50px' id='img" + i + "' src='" + currobjet.src + "'";
+                contenu += "onclick='modifImageObj(" + i + ");' onmouseover='" + scurrobjet + "illumine();' onmouseout='" + scurrobjet + "desillumine();'/></td>";
+                contenu += "<td><img class='cbmapbut2' id='bkill" + i + "' title='Supprimer l'objet' pic='bkill' act='suppObjet(" + i + ");'/></td>";
+                contenu += "</tr><tr>";
+                contenu += "<td>Opacité</td><td><input " + maj + "id='opac" + i + "' type='text' value='" + currobjet.opac + "'/></td>";
+                contenu += "<td><center><img class='cbmapbut2' id='bdown" + i + "' title='Placer plus bas' pic='bms' act='modobjordre(" + i + ",1);'/>";
+                contenu += "<img class='cbmapbut2' id='bdowndown" + i + "' title='Placer beaucoup plus bas' pic='bupup' act='modobjordre(" + i + ",5);'/></center></td>";
+                contenu += "<td><img class='cbmapbut2' id='bcopy" + i + "' title='Dupliquer l'objet' pic='bcopy' act='dupObjet(" + i + ");'/></td>";
+                contenu += "</tr><tr>";
+                contenu += "<td COLSPAN=2 ROWSPAN=4><textarea " + maj + "id='tnotes" + i + "' cols='22' rows='5'>" + currobjet.notes + "</textarea></td>";
+                contenu += "<td class='bigbutton'><center>Taille</center></td>";
+                contenu += "<td COLSPAN='3'class='bigbutton'><center>Position</center></td>";
+                contenu += "</tr><tr>";
+                contenu += "<td COLSPAN=2><center><img class='cbmapbut2' id='btailleym" + i + "' title='réduire la hauteur' pic='bmoins' act='" + scurrobjet + "taille(0,-1)'/></center></td>";
+                contenu += "<td><img class='cbmapbut2' id='bmovenw" + i + "' title='vers le haut et la gauche' pic='bmnw' act='" + scurrobjet + "deplace(-1,-1)'/></td>";
+                contenu += "<td><img class='cbmapbut2' id='bmoven" + i + "' title='vers le haut' pic='bmn' act='" + scurrobjet + "deplace(0,-1)'/></td>";
+                contenu += "<td><img class='cbmapbut2' id='bmovene" + i + "' title='vers le haut et la droite' pic='bmne' act='" + scurrobjet + "deplace(1,-1)'/></td>";
+                contenu += "</tr><tr>";
+                contenu += "<td COLSPAN=2><center><img class='cbmapbut2' id='btaillexm" + i + "' title='diminuter la largeur' pic='bmoins' act='" + scurrobjet + "taille(-1,0)'/>";
+                contenu += "<img class='cbmapbut2' id='btaillexp" + i + "' title='augmenter la largeur' pic='bplus' act='" + scurrobjet + "taille(1,0)'/><center></td>";
+                contenu += "<td><img class='cbmapbut2' id='bmovew" + i + "' title='vers la gauche' pic='bmw' act='" + scurrobjet + "deplace(-1,0)'/></td>";
+                contenu += "<td><img class='cbmapbut2' id='bmoveg" + i + "' title='vers une case sélectionnée' pic='bmove' act='mvtobjetdirect(" + i + ");'/></td>";
+                contenu += "<td><img class='cbmapbut2' id='bmovee" + i + "' title='vers la droite' pic='bme' act='" + scurrobjet + "deplace(1,0)'/></td>";
+                contenu += "</tr><tr>";
+                contenu += "<td COLSPAN=2><center><img class='cbmapbut2' id='btailleyp" + i + "' title='augmenter la hauteur' pic='bplus' act='" + scurrobjet + "taille(0,1)'/></center></td>";
+                contenu += "<td><img class='cbmapbut2' id='bmovesw" + i + "' title='vers le bas et la gauche' pic='bmsw' act='" + scurrobjet + "deplace(-1,1)'/></td>";
+                contenu += "<td><img class='cbmapbut2' id='bmoves" + i + "' title='vers le bas' pic='bms' act='" + scurrobjet + "deplace(0,1)'/></td>";
+                contenu += "<td><img class='cbmapbut2' id='bmovese" + i + "' title='vers le bas et la droite' pic='bmse' act='" + scurrobjet + "deplace(1,1)'/></td>";
+                contenu += "</tr>";
+            }
+            contenu += "</table>";
+            changedivcontrol(contenu, function () { });
+        }
+
+        function modifImageObj(idx) {
+            main.idxmvt = -1;
+            main.idxzmvt = -1;
+            main.idxomvt = -1;
+            var currobj = battlemap.objets[idx];
+            var nsrc = prompt("Entrez l'adresse de la nouvelle image.", currobj.src);
+            if (nsrc != null) {
+                currobj.src = nsrc;
+                currobj.img.src = nsrc;
+                $("#img" + idx).attr("src", nsrc);
+            }
+        }
+
+        function ajoutObjet() {
+            battlemap.objets[battlemap.nobjets] = new Objet(battlemap.nobjets, "Nouvel objet", defaultsrc, 0, 0, 1, 1, 1, "", true);
+            battlemap.objets[battlemap.nobjets].installe();
+            battlemap.nobjets++;
+            listeObjets();
+        }
+
+        function dupObjet(idx) {
+            var oobj = battlemap.objets[idx];
+            var nnom = nvnom(oobj.nom, battlemap.nobjets, battlemap.objets);
+            for (var i = battlemap.nobjets - 1; i > idx; i--) {
+                battlemap.objets[i].ajusteidx(i + 1);
+                battlemap.objets[i + 1] = battlemap.objets[i];
+            }
+            battlemap.nobjets++
+            battlemap.objets[idx + 1] =
+              new Objet(idx + 1, nnom, oobj.src, oobj.posx, oobj.posy, oobj.taillex,
+                                oobj.tailley, oobj.opac, oobj.notes, oobj.visible);
+            battlemap.objets[idx + 1].installe();
+            listeObjets();
+        }
+
+        function modobjordre(idx, dep) {
+            var nidx = idx + dep;
+            if (nidx < 0) nidx = 0;
+            if (nidx > battlemap.nobjets - 1) nidx = battlemap.nobjets - 1;
+            var sens = 0;
+            if (nidx > idx) sens = 1;
+            if (nidx < idx) sens = -1;
+            var curr = battlemap.objets[idx];
+            var i = idx;
+            while (i != nidx) {
+                var alt = i + sens;
+                battlemap.objets[i] = battlemap.objets[alt];
+                battlemap.objets[i].ajusteidx(i);
+                i = alt;
+            }
+            battlemap.objets[nidx] = curr;
+            curr.ajusteidx(nidx);
+            listeObjets();
+        }
+
+        function majObjet(idx) {
+            var enom = $("#nom" + idx).val();
+            var eopac = parseFloat($("#opac" + idx).val());
+            var enotes = $("#tnotes" + idx).val();
+            if (isNaN(eopac)) {
+                alert("L'opacité doit être un réel entre 0 et 1.");
+                $("#opac" + idx).val(battlemap.objets[idx].opac);
+            } else {
+                battlemap.objets[idx].nom = enom;
+                battlemap.objets[idx].opac = eopac;
+                battlemap.objets[idx].notes = enotes;
+                battlemap.objets[idx].installe();
+            }
+        }
+
+        function suppObjet(idx) {
+            main.idxmvt = -1;
+            main.idxzmvt = -1;
+            main.idxomvt = -1;
+            var answer = confirm("Voulez-vous vraiment supprimer l'objet " + battlemap.objets[idx].nom + " ?");
+            if (answer) {
+                battlemap.objets[idx].efface();
+                for (var i = idx; i < battlemap.nobjets - 1; i++) {
+                    battlemap.objets[i] = battlemap.objets[i + 1];
+                    battlemap.objets[i].idx = i;
+                }
+                battlemap.nobjets--;
+                listeObjets();
+            }
+        }
+
+        function mvtobjetdirect(idx) {
+            if (!main.grille) fbmap.grilleAction();
+            main.idxmvt = -1;
+            main.idxzmvt = -1;
+            main.idxomvt = idx;
+        }
+
+        /*******************/
+        /* LISTE DES ZONES */
+        /*******************/
+
+        function listeZones() {
+            main.idxmvt = -1;
+            main.idxzmvt = -1;
+            main.idxomvt = -1;
+            var contenu = "<table style='border: 1px solid black'>";
+            if (battlemap.nzones == 0) contenu += "<tr><td class='bigbutton'>Aucune zone</td></tr>";
+            for (var i = 0; i < battlemap.nzones; i++) {
+                var currzone = battlemap.zones[i];
+                var scurrzone = "battlemap.zones[" + i + "].";
+                var ajtaille = "ajusteztaille(" + i + ")";
+                var maj = "onchange = 'majZone(" + i + ");' ";
+                if (i > 0)
+                    contenu += "<tr><td colspan=10 style='background-color: black; padding: 1px'></td></tr>";
+                contenu += "<tr>";
+                contenu += "<td>Nom</td><td><input " + maj + "id='nom" + i + "' type='text' value='" + currzone.nom.replace(/'/, "&apos;") + "'/></td>";
+                contenu += "<td ROWSPAN='6' style='background-color: black; padding: 0.5px'></td>";
+                if ((currzone.type == cone) || (currzone.type == rectangle))
+                    contenu += "<td COLSPAN='3'class='bigbutton'><center>Rotation</center></td>";
+                else
+                    contenu += "<td COLSPAN='3'></td>";
+                contenu += "<td ROWSPAN='6' style='background-color: black; padding: 0.5px'></td>";
+                contenu += "<td id='zone" + i + "' COLSPAN='2' ROWSPAN='2' style='border: 2px solid white;";
+                contenu += "background-color: " + currzone.coul + "; opacity:" + currzone.opac + "'";
+                contenu += "onclick='modifImageZone(" + i + ");' onmouseover='" + scurrzone + "illumine();' onmouseout='" + scurrzone + "desillumine();' >";
+                if (currzone.src != "")
+                    contenu += "<img style='width:50px; height:50px; padding:0; margin:0' src='" + currzone.src + "'/>";
+                contenu += "</td>";
+                contenu += "<td><img class='cbmapbut2' id='kill" + i + "' title='Supprimer' pic='bkill' act='suppZone(" + i + ");'/></td>";
+                contenu += "</tr><tr>";
+                contenu += "<td>Couleur</td><td><input " + maj + "id='coul" + i + "' type='text' value='" + currzone.coul + "'/></td>";
+                if ((currzone.type == cone) || (currzone.type == rectangle)) {
+                    contenu += "<td><img class='cbmapbut2' id='brotm" + i + "' title='Rotation vers la gauche' pic='brotg' act='" + scurrzone + "ajusterot(1);" + ajtaille + "'/></td>";
+                    contenu += "<td></td>";
+                    contenu += "<td><img class='cbmapbut2' id='brotp" + i + "' title='Rotation vers la gauche' pic='brotd' act='" + scurrzone + "ajusterot(7);" + ajtaille + "'/></td>";
+                } else {
+                    contenu += "<td></td><td></td><td></td>";
+                }
+                contenu += "<td><img class='cbmapbut2' id='dup" + i + "' title='Dupliquer' pic='bcopy' act='dupZone(" + i + ");'/></td>";
+                contenu += "</tr><tr>";
+                contenu += "<td>Opacité</td><td><input " + maj + "id='opac" + i + "' type='text' value='" + currzone.opac + "'/></td>";
+                contenu += "<td COLSPAN='3'class='bigbutton'><center>Taille</center></td>";
+                contenu += "<td COLSPAN='3'class='bigbutton'><center>Position</center></td>";
+                contenu += "</tr><tr>";
+                contenu += "<td>Type</td><td><select " + maj + "id='stype" + i + "'>";
+                contenu += "<option value='cercle'>cercle</option>";
+                contenu += "<option value='cone'>cone</option>";
+                contenu += "<option value='rectangle'>rectangle</option>";
+                contenu += "<option value='aura'>aura</option>";
+                contenu += "</select></td>";
+                contenu += "<td></td>";
+                if (currzone.type == rectangle) {
+                    contenu += "<td><center><img class='cbmapbut2' id='btailleym" + i + "' title='réduire la hauteur' pic='bmoins' act='" + scurrzone + "taille(0,-1);" + ajtaille + "'/></center></td>";
+                } else {
+                    contenu += "<td></td>";
+                }
+                contenu += "<td></td>";
+                contenu += "<td><img class='cbmapbut2' id='bmovenw" + i + "' title='vers le haut et la gauche' pic='bmnw' act='" + scurrzone + "deplace(-1,-1);'/></td>";
+                contenu += "<td><img class='cbmapbut2' id='bmoven" + i + "' title='vers le haut' pic='bmn' act='" + scurrzone + "deplace(0,-1);'/></td>";
+                contenu += "<td><img class='cbmapbut2' id='bmovene" + i + "' title='vers le haut et la droite' pic='bmne' act='" + scurrzone + "deplace(1,-1);'/></td>";
+                contenu += "</tr><tr>";
+                contenu += "<td COLSPAN=2 ROWSPAN=2><textarea " + maj + "id='tnotes" + i + "' cols='20' rows='2'>" + currzone.notes + "</textarea></td>";
+                contenu += "<td><center><img class='cbmapbut2' id='btaillexm" + i + "' title='diminuter la largeur' pic='bmoins' act='" + scurrzone + "taille(-1,0);" + ajtaille + "'/></center></td>";
+                if ((currzone.type == cercle) || (currzone.type == cone) || (currzone.type == aura)) {
+                    contenu += "<td id='taille" + i + "' align='center'>" + currzone.taillex + "</td>";
+                } else {
+                    contenu += "<td id='taille" + i + "' style='text-align:center; font-size:small'>" + currzone.taillex + "/" + currzone.tailley + "</td>";
+                }
+                contenu += "<td><center><img class='cbmapbut2' id='btaillexp" + i + "' title='diminuter la largeur' pic='bplus' act='" + scurrzone + "taille(1,0);" + ajtaille + "'/></center></td>";
+                contenu += "<td><img class='cbmapbut2' id='bmovew" + i + "' title='vers la gauche' pic='bmw' act='" + scurrzone + "deplace(-1,0);'/></td>";
+                contenu += "<td><img class='cbmapbut2' id='bmoveg" + i + "' title='vers une case sélectionnée' pic='bmove' act='mvtzonedirect(" + i + ");'/></td>";
+                contenu += "<td><img class='cbmapbut2' id='bmovee" + i + "' title='vers la droite' pic='bme' act='" + scurrzone + "deplace(1,0);'/></td>";
+                contenu += "</tr><tr>";
+                contenu += "<td></td>";
+                if (currzone.type == rectangle) {
+                    contenu += "<td><center><img class='cbmapbut2' id='btailleyp" + i + "' title='augmenter la hauteur' pic='bplus' act='" + scurrzone + "taille(0,1);" + ajtaille + "'/></center></td>";
+                } else {
+                    contenu += "<td></td>";
+                }
+                contenu += "<td></td>";
+                contenu += "<td><img class='cbmapbut2' id='bmovesw" + i + "' title='vers le bas et la gauche' pic='bmsw' act='" + scurrzone + "deplace(-1,1);'/></td>";
+                contenu += "<td><img class='cbmapbut2' id='bmoves" + i + "' title='vers le bas' pic='bms' act='" + scurrzone + "deplace(0,1);'/></td>";
+                contenu += "<td><img class='cbmapbut2' id='bmovese" + i + "' title='vers le bas et la droite' pic='bmse' act='" + scurrzone + "deplace(1,1);'/></td>";
+                contenu += "</tr>";
+            }
+            contenu += "</table>";
+            changedivcontrol(contenu, listeZonessuite);
+        }
+
+        function ajusteztaille(i) {
+            var currzone = battlemap.zones[i];
+            var contenu = "";
+            if ((currzone.type == cercle) || (currzone.type == cone) || (currzone.type == aura)) {
+                contenu += currzone.taillex;
+            } else {
+                contenu += currzone.taillex + "/" + currzone.tailley;
+            }
+            $("#taille" + i).html(contenu);
+        }
+
+        function listeZonessuite() {
+            for (var i = 0; i < battlemap.nzones; i++) {
+                var currtype = battlemap.zones[i].type;
+                $("#stype" + i).attr("selectedIndex", currtype);
+            }
+        }
+
+        function modifImageZone(idx) {
+            main.idxmvt = -1;
+            main.idxzmvt = -1;
+            main.idxomvt = -1;
+            var currzone = battlemap.zones[idx];
+            var nsrc = prompt("Entrez l'adresse de la nouvelle image (ou rien pour enlever l'image).", currzone.src);
+            if (nsrc != null) {
+                currzone.src = nsrc;
+                currzone.installe();
+                listeZones();
+            }
+        }
+
+        function ajoutZone() {
+            battlemap.zones[battlemap.nzones] = new Zone(battlemap.nzones, "Nouvelle zone", cercle, "", "red", .5, 0, 0, 2, 2, 2, "", true);
+            battlemap.zones[battlemap.nzones].installe();
+            battlemap.nzones++;
+            listeZones();
+        }
+
+        function ajoutAuraJeton(idx) {
+            var currjeton = battlemap.elems[idx];
+            battlemap.zones[battlemap.nzones] =
+              new Zone(battlemap.nzones, "Aura pour " + currjeton.nom, aura, "", "white", .3, currjeton.posx, currjeton.posy, 2, 2, 2, "", true);
+            battlemap.zones[battlemap.nzones].installe();
+            battlemap.nzones++;
+            listeZones();
+        }
+
+        function dupZone(idx) {
+            var ozone = battlemap.zones[idx];
+            var nidx = battlemap.nzones;
+            battlemap.zones[nidx] =
+              new Zone(nidx, nvnom(ozone.nom, nidx, battlemap.zones), ozone.type, ozone.src, ozone.coul, ozone.opac, ozone.posx, ozone.posy,
+                              ozone.taillex, ozone.tailley, ozone.rot, ozone.notes, ozone.visible);
+            battlemap.nzones++;
+            battlemap.zones[battlemap.nzones - 1].installe();
+            listeZones();
+        }
+
+        function mvtzonedirect(idx) {
+            if (!main.grille) fbmap.grilleAction();
+            main.idxmvt = -1;
+            main.idxzmvt = idx;
+            main.idxomvt = -1;
+        }
+
+        function majZone(idx) {
+            var enom = $("#nom" + idx).val();
+            var ecoul = $("#coul" + idx).val();
+            var eopac = parseFloat($("#opac" + idx).val());
+            var etype = $("#stype" + idx).attr("selectedIndex");
+            var enotes = $("#tnotes" + idx).val();
+            if (isNaN(eopac)) {
+                alert("L'opacité doit être un réel entre 0 et 1.");
+                $("#opac" + idx).val(battlemap.zones[idx].opac);
+            } else {
+                battlemap.zones[idx].nom = enom;
+                battlemap.zones[idx].coul = ecoul;
+                battlemap.zones[idx].opac = eopac;
+                battlemap.zones[idx].type = etype;
+                battlemap.zones[idx].notes = enotes;
+                battlemap.zones[idx].installe();
+                listeZones();
+            }
+        }
+
+        function suppZone(idx) {
+            main.idxmvt = -1;
+            main.idxzmvt = -1;
+            main.idxomvt = -1;
+            var answer = confirm("Voulez-vous vraiment supprimer la zone " + battlemap.zones[idx].nom + " ?");
+            if (answer) {
+                battlemap.zones[idx].efface();
+                for (var i = idx; i < battlemap.nzones - 1; i++) {
+                    battlemap.zones[i] = battlemap.zones[i + 1];
+                    battlemap.zones[i].idx = i;
+                }
+                battlemap.nzones--;
+                listeZones();
+            }
+        }
+
+
+        /*********************/
+        /* FONCTIONS ANNEXES */
+        /*********************/
+
+        function initbutton(el, tai) {
+            $(el).attr("src", "Boutons/" + $(el).attr("pic") + ".jpg");
+            $(el).css("width", "" + tai + "px");
+            $(el).css("padding", "2px");
+            if ($(el).attr("id") != "bgrille") {
+                $(el).mouseover(function () { $(el).css("padding", "0px"); $(el).css("border", "2px solid #e7dfc6"); });
+                $(el).mouseout(function () { $(el).css("padding", "2px"); $(el).css("border", "0"); });
+            }
+            if ($(el).attr("act"))
+                $(el).click(new Function($(el).attr("act")));
+            $(el).css("padding", "2px");
+            $(el).css("border", "0");
+        }
+
+        function changedivcontrol(contenu, callback1, callback2) {
+            $("#divcontrol").fadeOut("fast", function () {
+                $("#divcontrol").empty();
+                $("#divcontrol").html(contenu);
+                $(".cbmapbut2").each(function () { initbutton(this, 20); });
+                callback1();
+                $("#divcontrol").fadeIn("fast", callback2);
+            });
+        }
+
+        function nvnom(nom, n, tab) {
+            var i = nom.length;
+            var num = "";
+            var cont = (i > 0);
+            while (cont) {
+                var c = nom.charAt(i - 1);
+                if ((c >= '0') && (c <= '9')) {
+                    num = "" + c + num;
+                    i--;
+                    cont = (i > 0);
+                }
+                else
+                    cont = false;
+            }
+            var racine;
+            var maxnum;
+            if (num != "") {
+                racine = nom.substring(0, i);
+                maxnum = parseInt(num);
+            } else {
+                racine = nom + " ";
+                maxnum = 1;
+            }
+            for (var i = 0; i < n; i++) {
+                var nomi = tab[i].nom;
+                if (nomi.substring(0, racine.length) == racine) {
+                    var val = parseInt(nomi.substring(racine.length, nomi.length));
+                    if ((!isNaN(val)) && (val > maxnum))
+                        maxnum = val;
+                }
+            }
+            return (racine + (maxnum + 1));
+        }
+
+        function distxcase(x, y, cx, cy) {
+            var dx = Math.abs(x - cx);
+            var dy = Math.abs(y - cy);
+            if (Math.abs((cx + 1) - x) > dx) { dx++; }
+            if (Math.abs((cy + 1) - y) > dy) { dy++; }
+            if (dx > dy) {
+                var tmp = dy;
+                dy = dx;
+                dx = tmp;
+            }
+            return (Math.floor(dx * 1.5) + (dy - dx));
+        }
+
+        function distacase(x, y, cx, cy) {
+            var dx = Math.abs(x - cx);
+            var dy = Math.abs(y - cy);
+            if (dx > dy) {
+                var tmp = dy;
+                dy = dx;
+                dx = tmp;
+            }
+            return (Math.floor(dx * 1.5) + (dy - dx));
+        }
+
+        /**********/
+        /* JETONS */
+        /**********/
+
+        function Elem(idx, nom, src, posx, posy, taillex, tailley, ordre, pv, pvmax, joue, etat, lien, notes, vis) {
+            this.idx = idx;
+            this.nom = nom;
+            this.src = src;
+            this.posx = posx;
+            this.posy = posy;
+            this.taillex = taillex;
+            this.tailley = tailley;
+            this.ordre = ordre;
+            this.pv = pv;
+            this.pvmax = pvmax;
+            this.joue = joue;
+            this.etat = etat;
+            this.img = null;
+            this.ap = null;
+            this.lien = lien;
+            this.notes = notes;
+            this.visible = vis;
+
+            this.installe = installeElem;
+            this.ajustenom = ajustenomElem;
+            this.ajusteidx = ajusteidxElem;
+            this.ajustepv = ajustepvElem;
+            this.ajustepvmax = ajustepvmaxElem;
+            this.efface = effaceElem;
+            this.ajusteetat = ajusteetatElem;
+            this.illumine = illumineElem;
+            this.desillumine = desillumineElem;
+            this.taille = tailleElem;
+            this.deplace = deplaceElem;
+            this.deplacevers = deplaceversElem;
+            this.ajustevisible = ajustevisibleElem;
+
+            this.getordre = function () { if ((this.etat == inconscient || this.etat == mort)) return (-1); else return (this.ordre); }
+        }
+
+        function installeElem() {
+            if ((!this.img) || (!this.ap)) {
+                this.ap = fbmap.$("<div></div>");
+                this.img = fbmap.$("<img />");
+                this.ap.appendTo(fbmap.$("#divbmap"));
+                this.img.appendTo(fbmap.$("#divbmap"));
+            }
+            this.ap.css("position", "absolute")
+                   .css("opacity", "0.5")
+                   .css("width", Math.floor(this.taillex * main.zoom))
+                   .css("height", Math.floor(this.tailley * main.zoom))
+                   .css("left", Math.floor(this.posx * main.zoom))
+                   .css("top", Math.floor(this.posy * main.zoom))
+                   .css("z-index", 500)
+                   .attr("title", this.nom + " (" + this.pv + "/" + this.pvmax + ")")
+                   .click(new Function("modifJeton(" + this.idx + ")"));
+            this.img.css("position", "absolute")
+                    .css("opacity", "1")
+                    .css("width", Math.floor(this.taillex * main.zoom) - 2)
+                    .css("height", Math.floor(this.tailley * main.zoom) - 2)
+                    .css("left", Math.floor(this.posx * main.zoom) + 1)
+                    .css("top", Math.floor(this.posy * main.zoom) + 1)
+                    .css("z-index", 501)
+                    .attr("src", this.src)
+                    .attr("title", this.nom + " (" + this.pv + "/" + this.pvmax + ")")
+                    .click(new Function("modifJeton(" + this.idx + ")"));
+            this.ajusteetat();
+            this.ajustevisible();
+        }
+
+        function ajustevisibleElem() {
+            if (this.visible) {
+                this.ap.css("visibility", "visible");
+                this.ap.css("display", "");
+                this.img.css("visibility", "visible");
+                this.img.css("display", "");
+            } else {
+                this.ap.css("visibility", "hidden");
+                this.ap.css("display", "none");
+                this.img.css("visibility", "hidden");
+                this.img.css("display", "none");
+            }
+        }
+
+        function ajustenomElem(val) {
+            this.nom = val;
+            if (this.img != null)
+                this.img.attr("title", this.nom + " (" + this.pv + "/" + this.pvmax + ")");
+            if (this.ap != null)
+                this.ap.attr("title", this.nom + " (" + this.pv + "/" + this.pvmax + ")");
+        }
+
+        function ajusteidxElem(val) {
+            this.idx = val;
+            if (this.ap != null)
+                this.ap.click(function () { modifJeton(this.idx) });
+            if (this.img != null)
+                this.img.click(function () { modifJeton(this.idx) });
+        }
+
+        function ajustepvElem(val) {
+            this.pv = val;
+            if (this.img != null)
+                this.img.attr("title", this.nom + " (" + this.pv + "/" + this.pvmax + ")");
+            if (this.ap != null)
+                this.ap.attr("title", this.nom + " (" + this.pv + "/" + this.pvmax + ")");
+        }
+
+        function ajustepvmaxElem(val) {
+            this.pvmax = val;
+            if (this.img != null)
+                this.img.attr("title", this.nom + " (" + this.pv + "/" + this.pvmax + ")");
+            if (this.ap != null)
+                this.ap.attr("title", this.nom + " (" + this.pv + "/" + this.pvmax + ")");
+        }
+
+        function effaceElem() {
+            this.img.remove();
+            this.ap.remove();
+        }
+
+        function ajusteetatElem() {
+            switch (this.etat) {
+                case 0:
+                    this.ap.css("background-Color", 'black');
+                    return;
+                case 1:
+                    this.ap.css("background-Color", 'transparent');
+                    return;
+                case 2:
+                    this.ap.css("background-Color", 'grey');
+                    return;
+                case 3:
+                    this.ap.css("background-Color", 'red');
+                    return;
+                case 4:
+                    this.ap.css("background-Color", 'white');
+                    return;
+            }
+        }
+
+        function illumineElem() {
+            this.ap.css("border", '2px solid white');
+            this.ap.css("opacity", 0.75);
+            setTimeout("battlemap.elems[" + this.idx + "].desillumine();", 1000);
+        }
+
+        function desillumineElem() {
+            this.ap.css("border", "0");
+            this.ap.css("opacity", 0.5);
+        }
+
+        function tailleElem(dx, dy) {
+            var nx = this.taillex + dx;
+            var ny = this.tailley + dy;
+            if ((nx > 0 && nx + this.posx <= battlemap.taillex)) {
+                this.taillex = nx;
+                this.img.css("width", Math.floor(this.taillex * main.zoom) - 2);
+                this.ap.css("width", Math.floor(this.taillex * main.zoom));
+            }
+            if ((ny > 0 && ny + this.posy <= battlemap.tailley)) {
+                this.tailley = ny;
+                this.img.css("height", Math.floor(this.tailley * main.zoom) - 2);
+                this.ap.css("height", Math.floor(this.tailley * main.zoom));
+            }
+        }
+
+        function deplaceElem(dx, dy) {
+            var nx = this.posx + dx;
+            var ny = this.posy + dy;
+            this.deplacevers(nx, ny);
+        }
+
+        function deplaceversElem(nx, ny) {
+            if ((nx < 0) || (nx + this.taillex > battlemap.taillex))
+                nx = this.posx;
+            if ((ny < 0) || (ny + this.tailley > battlemap.tailley))
+                ny = this.posy;
+            var nsteps = 15;
+            if ((nx != this.posx) || (ny != this.posy)) {
+                var oleft = Math.floor(this.posx * main.zoom);
+                var otop = Math.floor(this.posy * main.zoom);
+                var nleft = Math.floor(nx * main.zoom);
+                var ntop = Math.floor(ny * main.zoom);
+                var dleft = (nleft - oleft) / nsteps;
+                var dtop = (ntop - otop) / nsteps;
+                var currelem = "battlemap.elems[" + this.idx + "]";
+                this.posx = nx;
+                this.posy = ny;
+                for (var i = 0; i < nsteps; i++)
+                    setTimeout(currelem + ".img.css('left'," + (oleft + dleft * i + 1) + ");" +
+                               currelem + ".ap.css('left'," + (oleft + dleft * i) + ");" +
+                               currelem + ".img.css('top'," + (otop + dtop * i + 1) + ");" +
+                               currelem + ".ap.css('top'," + (otop + dtop * i) + ");",
+                               i * 25);
+                setTimeout(currelem + ".img.css('left'," + (nleft + 1) + ");" +
+                           currelem + ".ap.css('left'," + nleft + ");" +
+                           currelem + ".img.css('top'," + (ntop + 1) + ");" +
+                           currelem + ".ap.css('top'," + ntop + ");",
+                           nsteps * 25);
+            }
+        }
+
+        /**********/
+        /* OBJETS */
+        /**********/
+
+        function Objet(idx, nom, src, posx, posy, taillex, tailley, opac, notes, vis) {
+            this.idx = idx;
+            this.nom = nom;
+            this.src = src;
+            this.posx = posx;
+            this.posy = posy;
+            this.taillex = taillex;
+            this.tailley = tailley;
+            this.opac = opac;
+            this.notes = notes;
+            this.visible = vis;
+
+            this.installe = installeObjet;
+            this.ajustenom = ajustenomObjet;
+            this.ajusteidx = ajusteidxObjet;
+            this.efface = effaceObjet;
+            this.illumine = illumineObjet;
+            this.desillumine = desillumineObjet;
+            this.taille = tailleObjet;
+            this.deplace = deplaceObjet;
+            this.deplacevers = deplaceversObjet;
+            this.ajustevisible = ajustevisibleObjet;
+        }
+
+        function installeObjet() {
+            if ((!this.img) || (!this.ap)) {
+                this.ap = fbmap.$("<div></div>");
+                this.img = fbmap.$("<img />");
+                this.ap.appendTo(fbmap.$("#divbmap"));
+                this.img.appendTo(fbmap.$("#divbmap"));
+            }
+            this.ap.css("position", "absolute")
+                   .css("opacity", this.opac)
+                   .css("width", Math.floor(this.taillex * main.zoom))
+                   .css("height", Math.floor(this.tailley * main.zoom))
+                   .css("left", Math.floor(this.posx * main.zoom))
+                   .css("top", Math.floor(this.posy * main.zoom))
+                   .css("z-index", 100 + this.idx)
+                   .attr("title", this.nom)
+                   .click(function () { listeObjets() });
+            this.img.css("position", "absolute")
+                    .css("opacity", this.opac)
+                    .css("width", Math.floor(this.taillex * main.zoom) - 2)
+                    .css("height", Math.floor(this.tailley * main.zoom) - 1)
+                    .css("left", Math.floor(this.posx * main.zoom) + 1)
+                    .css("top", Math.floor(this.posy * main.zoom) + 1)
+                    .css("z-index", 300 + this.idx)
+                    .attr("title", this.nom)
+                    .attr("src", this.src)
+                    .click(function () { listeObjets() });
+            this.ajustevisible();
+        }
+
+        function ajustevisibleObjet() {
+            if (this.visible) {
+                this.ap.css("visibility", "visible");
+                this.ap.css("display", "");
+                this.img.css("visibility", "visible");
+                this.img.css("display", "");
+            } else {
+                this.ap.css("visibility", "hidden");
+                this.ap.css("display", "none");
+                this.img.css("visibility", "hidden");
+                this.img.css("display", "none");
+            }
+        }
+
+        function ajustenomObjet(val) {
+            this.nom = val;
+            if (this.img != null)
+                this.img.attr("title", this.nom);
+            if (this.ap != null)
+                this.ap.attr("title", this.nom);
+        }
+
+        function ajusteidxObjet(val) {
+            this.idx = val;
+            if (this.ap != null) {
+                this.ap.css("z-Index", 300 + this.idx);
+            }
+            if (this.img != null) {
+                this.img.css("z-Index", 100 + this.idx);
+            }
+        }
+
+        function effaceObjet() {
+            this.img.remove();
+            this.ap.remove();
+        }
+
+        function illumineObjet() {
+            this.ap.css("border", '2px solid white');
+            this.ap.css("opacity", 0.75);
+            setTimeout("battlemap.objets[" + this.idx + "].desillumine();", 1000);
+        }
+
+        function desillumineObjet() {
+            this.ap.css("border", "0");
+            this.ap.css("opacity", 0.5);
+        }
+
+        function tailleObjet(dx, dy) {
+            var nx = this.taillex + dx;
+            var ny = this.tailley + dy;
+            if ((nx > 0 && nx + this.posx <= battlemap.taillex)) {
+                this.taillex = nx;
+                this.img.css("width", Math.floor(this.taillex * main.zoom) - 2);
+                this.ap.css("width", Math.floor(this.taillex * main.zoom));
+            }
+            if ((ny > 0 && ny + this.posy <= battlemap.tailley)) {
+                this.tailley = ny;
+                this.img.css("height", Math.floor(this.tailley * main.zoom) - 2);
+                this.ap.css("height", Math.floor(this.tailley * main.zoom));
+            }
+        }
+
+        function deplaceObjet(dx, dy) {
+            var nx = this.posx + dx;
+            var ny = this.posy + dy;
+            this.deplacevers(nx, ny);
+        }
+
+        function deplaceversObjet(nx, ny) {
+            if ((nx < 0) || (nx + this.taillex > battlemap.taillex))
+                nx = this.posx;
+            if ((ny < 0) || (ny + this.tailley > battlemap.tailley))
+                ny = this.posy;
+            var nsteps = 15;
+            if ((nx != this.posx) || (ny != this.posy)) {
+                var oleft = Math.floor(this.posx * main.zoom);
+                var otop = Math.floor(this.posy * main.zoom);
+                var nleft = Math.floor(nx * main.zoom);
+                var ntop = Math.floor(ny * main.zoom);
+                var dleft = (nleft - oleft) / nsteps;
+                var dtop = (ntop - otop) / nsteps;
+                var currelem = "battlemap.objets[" + this.idx + "]";
+                this.posx = nx;
+                this.posy = ny;
+                for (var i = 0; i < nsteps; i++)
+                    setTimeout(currelem + ".img.css('left'," + (oleft + dleft * i + 1) + ");" +
+                               currelem + ".ap.css('left'," + (oleft + dleft * i) + ");" +
+                               currelem + ".img.css('top'," + (otop + dtop * i + 1) + ");" +
+                               currelem + ".ap.css('top'," + (otop + dtop * i) + ");",
+                               i * 25);
+                setTimeout(currelem + ".img.css('left'," + (nleft + 1) + ");" +
+                           currelem + ".ap.css('left'," + nleft + ");" +
+                           currelem + ".img.css('top'," + (ntop + 1) + ");" +
+                           currelem + ".ap.css('top'," + ntop + ");",
+                           nsteps * 25);
+            }
+        }
+
+        /*********/
+        /* ZONES */
+        /*********/
+
+        function Zone(idx, nom, type, src, coul, opac, posx, posy, taillex, tailley, rot, notes, vis) {
+            this.idx = idx;
+            this.nom = nom;
+            this.type = type;
+            this.src = src;
+            this.coul = coul;
+            this.opac = opac;
+            this.posx = posx;
+            this.posy = posy;
+            this.taillex = taillex;
+            this.tailley = tailley;
+            this.rot = rot;
+            this.ntiles = 0;
+            this.tiles = null;
+            this.notes = notes;
+            this.visible = vis;
+
+            this.deplace = deplaceZone;
+            this.deplacevers = deplaceversZone;
+            this.taille = tailleZone;
+            this.ajustenom = ajustenomZone;
+            this.ajusterot = ajusterotZone;
+            this.installe = installeZone;
+            this.creetile = creetileZone;
+            this.efface = effaceZone;
+            this.illumine = illumineZone;
+            this.desillumine = desillumineZone;
+            this.ajustevisible = ajustevisibleZone;
+        }
+
+        function deplaceversZone(nx, ny) {
+            if ((nx >= 0) && (ny >= 0) && (nx <= battlemap.taillex - 1) && (ny <= battlemap.tailley - 1)) {
+                this.posx = nx;
+                this.posy = ny;
+                this.installe();
+            }
+        }
+
+        function deplaceZone(mx, my) {
+            var nx = this.posx + mx;
+            var ny = this.posy + my;
+            if ((nx >= 0) && (ny >= 0) && (nx <= battlemap.taillex - 1) && (ny <= battlemap.tailley - 1)) {
+                this.posx = nx;
+                this.posy = ny;
+                this.installe();
+            }
+        }
+
+        function tailleZone(dx, dy) {
+            var ntx = this.taillex + dx;
+            var nty = this.tailley + dy;
+            if (ntx > 0) {
+                this.taillex = ntx;
+            }
+            if (nty > 0) {
+                this.tailley = nty;
+            }
+            this.installe();
+        }
+
+        function ajustenomZone(val) {
+            this.nom = val;
+            for (var i = 0; i < this.ntiles; i++) {
+                this.tiles[i].attr("title", val);
+            }
+        }
+
+        function ajusterotZone(val) {
+            if (this.type == rectangle) {
+                var tmp = this.taillex;
+                this.taillex = this.tailley;
+                this.tailley = tmp;
+            } else {
+                this.rot = (this.rot + val) % 8;
+            }
+            this.installe();
+        }
+
+        function installeZone() {
+            var i = 0;
+            var tile = null;
+            if ((this.ntiles > 0) && this.tiles) {
+                while (i < this.ntiles) {
+                    this.tiles[i].remove();
+                    i++;
+                }
+            }
+            this.ntiles = 0;
+            this.tiles = new Array();
+            switch (this.type) {
+                case 2:
+                    this.creetile(this.posx, this.posy, this.taillex, this.tailley);
+                    break;
+                case 1:
+                    if (this.rot % 2 == 0) {
+                        var minx = this.posx;
+                        if ((this.rot == 4) || (this.rot == 6)) {
+                            minx = this.posx - this.taillex;
+                        }
+                        var miny = this.posy;
+                        if ((this.rot == 0) || (this.rot == 6)) {
+                            miny = this.posy - this.taillex;
+                        }
+                        var maxx = minx + this.taillex - 1;
+                        var maxy = miny + this.taillex - 1;
+                        for (var x = minx; x <= maxx; x++) {
+                            for (var y = miny; y <= maxy; y++) {
+                                if (distxcase(this.posx, this.posy, x, y) <= this.taillex) {
+                                    this.creetile(x, y, 1, 1);
+                                }
+                            }
+                        }
+                    } else {
+                        var invxy = -1;
+                        var droite = this.posx;
+                        var haut = this.posy - 1;
+                        var croisshaut = -1;
+                        if (this.rot == 1) { invxy = 1; droite = this.posy; haut = this.posx; croisshaut = 1; }
+                        if (this.rot == 3) { invxy = -1; droite = this.posx - 1; haut = this.posy; croisshaut = 1; }
+                        if (this.rot == 5) { invxy = 1; droite = this.posy - 1; haut = this.posx - 1; croisshaut = -1; }
+                        var gauche = droite;
+                        if (this.taillex % 2 == 0)
+                            if (croisshaut * invxy == 1) {
+                                gauche = droite - 1;
+                            } else {
+                                droite = gauche + 1;
+                            }
+                        var refx = this.posx - croisshaut;
+                        var refy = this.posy;
+                        if (invxy == 1) {
+                            refx = this.posx;
+                            refy = this.posy + croisshaut;
+                        }
+                        var ok = true;
+                        for (var dy = 0; dy < this.taillex; dy++) {
+                            var y = haut + dy * croisshaut;
+                            for (var x = gauche; x <= droite; x++) {
+                                var xx = x;
+                                var yy = y;
+                                if (invxy == 1) { xx = y; yy = x; }
+                                ok = distxcase(this.posx, this.posy, xx, yy) <= this.taillex;
+                                if (this.taillex % 2 == 1) {
+                                    ok = ok || (distxcase(refx, refy, xx, yy) <= this.taillex);
+                                }
+                                if (ok) this.creetile(xx, yy, 1, 1);
+                            }
+                            gauche--;
+                            droite++;
+                        }
+                    }
+                    break;
+                case 0:
+                    for (var x = this.posx - this.taillex; x <= this.posx + this.taillex; x++) {
+                        for (var y = this.posy - this.taillex; y <= this.posy + this.taillex; y++) {
+                            if (distxcase(this.posx, this.posy, x, y) <= this.taillex) {
+                                this.creetile(x, y, 1, 1);
+                            }
+                        }
+                    }
+                    break;
+                case 3:
+                    for (var x = this.posx - this.taillex; x <= this.posx + this.taillex; x++) {
+                        for (var y = this.posy - this.taillex; y <= this.posy + this.taillex; y++) {
+                            if (distacase(this.posx, this.posy, x, y) <= this.taillex) {
+                                this.creetile(x, y, 1, 1);
+                            }
+                        }
+                    }
+            }
+            this.ajustevisible();
+        }
+
+        function ajustevisibleZone() {
+            for (var i = 0; i < this.ntiles ; i++) {
+                var tile = this.tiles[i];
+                if (this.visible) {
+                    tile.css("visibility", "visible");
+                    tile.css("display", "");
+                } else {
+                    tile.css("visibility", "hidden");
+                    tile.css("display", "none");
+                }
+            }
+        }
+
+        function creetileZone(ipx, ipy, itx, ity) {
+            var px = ipx;
+            var py = ipy;
+            var tx = itx;
+            var ty = ity;
+            if (px < 0) { tx = tx + px; px = 0; }
+            if (py < 0) { ty = ty + py; py = 0; }
+            if (px + tx > battlemap.taillex) tx = battlemap.taillex - px;
+            if (py + ty > battlemap.tailley) ty = battlemap.tailley - py;
+            if ((px <= battlemap.taillex - 1) && (py <= battlemap.tailley - 1) && (tx >= 1) && (ty >= 1))
+                for (var xx = px; xx < px + tx; xx++)
+                    for (var yy = py; yy < py + ty; yy++) {
+                        var tile = fbmap.$("<div></div>");
+                        tile.appendTo(fbmap.$("#divbmap"));
+                        tile.attr("title", this.nom)
+                            .css("position", "absolute")
+                            .css("opacity", this.opac)
+                            .css("background-color", this.coul)
+                            .css("z-index", 10)
+                            .css("width", main.zoom)
+                            .css("height", main.zoom)
+                            .css("left", xx * main.zoom)
+                            .css("top", yy * main.zoom)
+                            .click(function () { listeZones() });
+                        if (this.src != "")
+                            tile.html("<img style='width:100%; height:100%; padding:0; margin:0' src='" + this.src + "'/>");
+                        this.tiles[this.ntiles] = tile;
+                        this.ntiles++;
+                    }
+        }
+
+        function effaceZone() {
+            var i = 0;
+            if (this.tiles) {
+                while (i < this.ntiles) {
+                    this.tiles[i].remove();
+                    i++;
+                }
+            }
+            this.ntiles = 0;
+            this.tiles = null;
+        }
+
+        function illumineZone() {
+            for (var i = 0; i < this.ntiles; i++) {
+                this.tiles[i].css("border", '1px solid white')
+                             .css("width", main.zoom - 2)
+                             .css("height", main.zoom - 2)
+                             .css("opacity", 1);
+            }
+            setTimeout("battlemap.zones[" + this.idx + "].desillumine();", 1000);
+        }
+
+        function desillumineZone() {
+            for (var i = 0; i < this.ntiles; i++) {
+                this.tiles[i].css("border", '0')
+                             .css("width", main.zoom)
+                             .css("height", main.zoom)
+                             .css("opacity", this.opac);
+            }
+        }
+
+        /*************/
+        /* BATTLEMAP */
+        /*************/
+
+        function Battlemap() {
+            this.src = "";
+            this.taillex = 1;
+            this.tailley = 1;
+            this.nelems = 0;
+            this.elems = new Array(0);
+            this.nzones = 0;
+            this.zones = new Array(0);
+            this.nobjets = 0;
+            this.objets = new Array(0);
+        }
+
+    </script>
+
+</head>
+<body>
+
+    <center>
+        <table style=' margin: 0 0 10px 0; border: 1px solid #4b3124'>
+            <tr>
+                <td><img class="cbmapbut" id="bmap" pic="bmap" title="Modifier la battlemap" act="editmap()" /></td>
+                <td><img class="cbmapbut" id="bgrille" pic="bgrid" title="Grille on/off" act="fbmap.grilleAction()" /></td>
+                <td>
+                    <img class="cbmapbut" id="bbest0" pic="bbest" title="Ouvrir le Bestiaire Pathfinder"
+                         act="window.open('http://www.pathfinder-fr.org/Wiki/Pathfinder-RPG.Monstres.ashx','annexe','scrollbars=yes,resizable=yes,directories=no,location=no,menubar=no,left=50,top=50');" />
+                </td>
+                <td id='tjetons' class="bigbutton" colspan=5 onclick="listeJetons()">Jetons</td>
+                <td id='tobjets' class="bigbutton" colspan=2 onclick="listeObjets()">Objets</td>
+                <td id='tzones' class="bigbutton" colspan=2 onclick="listeZones()">Zones </td>
+                <td><img class="cbmapbut" id="bquit" pic="bkill" title="Fermer les fenêtres de la battlemap" act="main.fin()" /></td>
+            </tr>
+            <tr>
+                <td><img class="cbmapbut" id="btools" pic="btools" title="Configuration" act="configuration()" /></td>
+                <td><img class="cbmapbut" id="bzoom" pic="bzoom" title="Zoom" act="choisitZoom()" /></td>
+                <td><img class="cbmapbut" id="bgal" pic="bgalerie" title="Ouvrir la galerie de jetons" act="main.debuttokens()" /></td>
+                <td><img class="cbmapbut" id="blistejetons" pic="blist" title="Liste des jetons" act="listeJetons()" /></td>
+                <td><img class="cbmapbut" id="bajoutjeton" pic="bajout" title="Nouveau jeton" act="ajoutJeton()" /></td>
+                <td><img class="cbmapbut" id="nround" pic="bnround" title="Nouveau round" act="nouveauRound()" /></td>
+                <td><img class="cbmapbut" id="binit" pic="binit" title="Tri par initiative" act="main.tridefaut = 0; listeJetons();" /></td>
+                <td><img class="cbmapbut" id="baz" pic="baz" title="Tri alphabétique" act="main.tridefaut = 1; listeJetons();" /></td>
+                <td><img class="cbmapbut" id="blisteobjets" pic="blist" title="Liste des objets" act="listeObjets()" /></td>
+                <td><img class="cbmapbut" id="bajoutobjet" pic="bajout" title="Nouvel objet" act="ajoutObjet()" /></td>
+                <td><img class="cbmapbut" id="blistezones" pic="blist" title="Liste des zones" act="listeZones()" /></td>
+                <td><img class="cbmapbut" id="bajoutzone" pic="bajout" title="Nouvelle zone" act="ajoutZone()" /></td>
+                <td><img class="cbmapbut" id="bcode" pic="bcode" title="Code" act="afficheCode()" /></td>
+            </tr>
+        </table>
+
+        <div id='divcontrol' style='width:100%'>
+        </div>
+
+    </center>
+
+</body>
+</html>

@@ -1,0 +1,263 @@
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+    <script src="http://code.jquery.com/jquery-latest.min.js" type="text/javascript"></script>
+    <script src="/scripts/BattlemapTokens.ashx" type='text/javascript'></script>
+    <script type="text/javascript">
+        function gotokens() {
+            var selcat = document.getElementById("selcat");
+            var i = 0;
+            for (var name in tokens) {
+                if ((name == "Fichiers") || (name == "Boutons")) continue;
+                trietoken(tokens[name]);
+                var nopt = new Option(name, name, (i == 0), (i == 0));
+                selcat.options[i] = nopt;
+                i++;
+            }
+            $("#selcat").change(majtokens);
+            $("#bgauche").click(function () { avancetoken(-1); });
+            $("#bdroite").click(function () { avancetoken(1); });
+            $("#belem").click(vaelem);
+            $("#bscat").click(vascat);
+            header = "http://www.pathfinder-fr.org/wiki/public/upload/Battlemaps/"
+            prem = 0;
+            ctg = "";
+            colparligne = 5;
+            ligneparpage = 5;
+            $("#iimgparligne").val("" + colparligne);
+            $("#ilgparpage").val("" + ligneparpage);
+            $("#iimgparligne").change(majimgparligne);
+            $("#ilgparpage").change(majlgparpage);
+            majtokens();
+        }
+        function majimgparligne() {
+            var nval = parseInt($("#iimgparligne").val());
+            if (isNaN(nval) || (nval < 1) || (nval > 10))
+                alert("Le nombre d'images par ligne doit &ecirc;tre compris entre 1 et 10.");
+            else {
+                colparligne = nval;
+                majtokens();
+            }
+        }
+        function majlgparpage() {
+            var nval = parseInt($("#ilgparpage").val());
+            if (isNaN(nval) || (nval < 1) || (nval > 50))
+                alert("Le nombre de rangées par page doit &ecirc;tre compris entre 1 et 50.");
+            else {
+                ligneparpage = nval;
+                majtokens();
+            }
+        }
+        function avancetoken(d) {
+            var name = $("#selcat").val();
+            prem += d * colparligne * ligneparpage;
+            if (prem < 0) prem = 0;
+            if (prem >= tokens[name].length) prem = tokens[name].length - 1;
+            majtokens();
+        }
+        function vaelem() {
+            var num = parseInt($("#selelem").val());
+            if (!isNaN(num)) {
+                prem = num;
+                majtokens();
+            }
+        }
+        function vascat() {
+            var num = parseInt($("#selscat").val());
+            if (!isNaN(num)) {
+                prem = num;
+                majtokens();
+            }
+        }
+        function majtokens() {
+            var name = $("#selcat").val();
+            if (name != ctg) {
+                prem = 0;
+                ctg = name;
+                $("#selelem").empty();
+                $("#selscat").empty();
+                if (tokens[name].length > 0) {
+                    var rac = "";
+                    var nrac = "";
+                    for (var i = 0; i < tokens[name].length; i++) {
+                        $("#selelem").append("<option value='" + i + "'>" + tokens[name][i] + "</option>");
+                        nrac = racine(tokens[name][i]);
+                        if (rac != nrac) {
+                            $("#selscat").append("<option value='" + i + "'>" + nrac + "</option>");
+                            rac = nrac;
+                        }
+                    }
+                    $("#selelem").val("0");
+                    $("#selscat").val("0");
+                    $("#belem").attr("disabled", false);
+                    $("#bscat").attr("disabled", false);
+                } else {
+                    $("#belem").attr("disabled", true);
+                    $("#bscat").attr("disabled", true);
+                }
+            }
+            var dernier = prem + colparligne * ligneparpage - 1;
+            if (dernier >= (tokens[name]).length)
+                dernier = (tokens[name]).length - 1;
+            $("#lmaintenant").html("Affich&egrave; : de " + tokens[name][prem] + " &agrave; " + tokens[name][dernier]);
+            var contenu = "";
+            var perc = 100 / colparligne;
+            for (var i = prem; i <= dernier; i++) {
+                var fname = tokens[name][i];
+                var url = header + name + "/" + fname + ".png";
+                if ((i - prem) % colparligne == 0) {
+                    if (i != prem) contenu += "</tr>";
+                    contenu += "<tr style='vertical-align: top'>";
+                }
+                contenu += "<td style='text-align: center; border: 1px solid black; width: " + perc + "%'>";
+                contenu += "<table width='100%' cellspacing=0 style='text-align: center'>";
+                contenu += "<tr><td style='background-color: #4b3124; color: #fff; font-weight: bold; padding: 4px'>" + fname + "</td></tr>";
+                contenu += "<tr><td><img style='width: 90%' src='" + url + "' /></td></tr>";
+                contenu += "<tr><td><textarea style='font-size: small; width: 95%'>" + url + "</textarea></td></tr>";
+                contenu += "</td></tr></table></td>";
+            }
+            contenu += "</tr>";
+            $("#ttoks").html(contenu);
+            if (prem > 0) {
+                var nprem = prem - colparligne * ligneparpage;
+                if (nprem < 0) nprem = 0;
+                var ndern = nprem + colparligne * ligneparpage - 1;
+                if (ndern >= tokens[name].length) ndern = tokens[name].length - 1;
+                $("#bgauche").attr("disabled", false);
+                $("#lgauche").html("vers " + tokens[name][nprem] + " &agrave; " + tokens[name][ndern]);
+            } else {
+                $("#bgauche").attr("disabled", true);
+                $("#lgauche").html("");
+            }
+            if (dernier < tokens[name].length - 1) {
+                var ndern = dernier + colparligne * ligneparpage;
+                if (ndern >= tokens[name].length) ndern = tokens[name].length - 1;
+                var nprem = ndern - colparligne * ligneparpage + 1;
+                if (nprem < 0) nprem = 0;
+                $("#bdroite").attr("disabled", false);
+                $("#ldroite").html("vers " + tokens[name][nprem] + " &agrave; " + tokens[name][ndern]);
+            } else {
+                $("#bdroite").attr("disabled", true);
+                $("#ldroite").html("");
+            }
+        }
+        function trietoken(t) {
+            for (var i = 0; i < t.length - 1; i++)
+                for (var j = i + 1; j < t.length; j++)
+                    if (pptoken(t[j], t[i])) {
+                        var tmp = t[j];
+                        t[j] = t[i];
+                        t[i] = tmp;
+                    }
+        }
+        function racine(s) {
+            var i = 0;
+            while ((i < s.length) &&
+                    ((s.charAt(i) < '0') || (s.charAt(i) > '9')))
+                i++;
+            return s.toLowerCase().substring(0, i);
+        }
+        function pptoken(ss1, ss2) {
+            var s1 = ss1.toLowerCase();
+            var s2 = ss2.toLowerCase();
+            var i = 0;
+            while (i < s1.length) {
+                var c1 = s1.charAt(i);
+                var c2 = s2.charAt(i);
+                if ((c1 >= '0') && (c1 <= '9')) {
+                    var num1 = parseInt(s1.substring(i), 10);
+                    var num2 = parseInt(s2.substring(i), 10);
+                    if (isNaN(num1) || isNaN(num2))
+                        return (s1 < s2);
+                    else
+                        return (num1 < num2);
+                }
+                else if (c1 == c2)
+                    i++;
+                else if ((c1 >= 'a') && (c1 <= 'z') && (c2 >= 'a') && (c2 <= 'z'))
+                    return (c1 < c2);
+                else {
+                    var cc1 = accentsTidy(c1);
+                    var cc2 = accentsTidy(c2);
+                    if (cc1 == cc2)
+                        i++;
+                    else
+                        return (cc1 < cc2);
+                }
+            }
+        }
+        function accentsTidy(s) {
+            var r = s.toLowerCase();
+            r = r.replace(new RegExp("[àáâãäå]", 'g'), "a");
+            r = r.replace(new RegExp("æ", 'g'), "ae");
+            r = r.replace(new RegExp("ç", 'g'), "c");
+            r = r.replace(new RegExp("[èéêë]", 'g'), "e");
+            r = r.replace(new RegExp("[ìíîï]", 'g'), "i");
+            r = r.replace(new RegExp("ñ", 'g'), "n");
+            r = r.replace(new RegExp("[òóôõö]", 'g'), "o");
+            r = r.replace(new RegExp("œ", 'g'), "oe");
+            r = r.replace(new RegExp("[ùúûü]", 'g'), "u");
+            r = r.replace(new RegExp("[ýÿ]", 'g'), "y");
+            return r;
+        };
+        $(gotokens);
+    </script>
+</head>
+<body>
+    <table style="border: 0; width:100%">
+        <tr>
+            <td style="border: 1px solid #4b3124">
+                <table style="width:100%">
+                    <tr>
+                        <td>
+                            <b>Cat&egrave;gorie</b> <select id="selcat"></select>
+                        </td>
+                    </tr>
+                    <tr style="background-color: #f3efe2">
+                        <td id="lmaintenant" colspan=2></td>
+                    </tr>
+                    <tr>
+                        <td>
+                            Images par ligne : <input type="text" size=3 id="iimgparligne" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            Lignes par page : <input type="text" size=3 id="ilgparpage" />
+                        </td>
+                    </tr>
+                </table>
+            </td>
+            <td style="border: 1px solid #4b3124">
+                <table>
+                    <tr>
+                        <td>
+                            <button id="bgauche" disabled="disabled">Reculer</button>
+                            <span id="lgauche" style="font-size: small"></span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <button id="bdroite" disabled="disabled">Avancer</button>
+                            <span id="ldroite" style="font-size: small"></span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <button id="bscat" disabled="disabled">Aller</button> vers une sous-catégorie
+                            <select id="selscat"></select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <button id="belem">Aller</button> vers un élément
+                            <select id="selelem"></select>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+    <table id="ttoks" style="width:100%"></table>
+</body>
+</html>

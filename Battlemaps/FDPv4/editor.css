@@ -1,0 +1,23 @@
+﻿body, table, input {
+    font-family: "Trebuchet MS", Helvetica, sans-serif;
+    font-size: 12px;
+}
+.bwikilink {
+    width: 8px;
+    margin: 0 0 2px 2p;
+    padding-bottom: 2px;
+}
+
+table.full, td.full {
+    width: 100%;
+}
+
+#idimg {
+    width: 90px;
+    border: 1px solid #f3efe2;
+    background-color: #f3efe2;
+}
+
+.bordered {
+    border: 1px solid #4b3124;
+}

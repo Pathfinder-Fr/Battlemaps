@@ -1,0 +1,299 @@
+﻿<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf8" />
+    <title>Fiche de personnage</title>
+    <link type="text/css" href="http://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css" rel="stylesheet" />
+    <link href="fdp.css?v=2" type="text/css" rel="stylesheet" />
+    <script type="text/javascript" src="http://code.jquery.com/jquery-1.9.1.js"></script>
+    <script type="text/javascript" src="http://code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
+    <script type="text/javascript" src="ICanHaz.min.js"></script>
+    <script type="text/javascript" src="fdp.js?v=3"></script>
+    <script type="text/html" id="ficheTabs">
+        <ul>
+            <li><a href='#tIdentité'>Identité</a></li>
+            <li><a href='#tCombat'>Combat</a></li>
+            <li><a href='#tCapacités'>Capacités</a></li>
+            <li><a href='#tCompétences'>Compétences</a></li>
+            <li><a href='#tMagie'>Magie</a></li>
+            <li><a href='#tÉquipement'>Équipement</a></li>
+            <li><a href='#tCompagnon'>Compagnon</a></li>
+            <li><a href='#tNotes'>Notes</a></li>
+        </ul>
+    </script>
+    <script type="text/html" id="summary2Col">
+        <div>
+            <b>Réf</b> : {{ref}}
+            <br />
+            <b>Vig</b> : {{vig}}
+            <br />
+            <b>Vol</b> : {{vol}}
+        </div>
+    </script>
+    <script type="text/html" id="summary3Col">
+        <div>
+            <b>PV</b> : {{pv}}/{{pvmax}}<br />
+            <b>CA</b> : {{ca}} (contact {{cacontact}}, surpris {{casurpris}})<br />
+            <b>BMC/DMD</b> : {{bmo}}/{{dmd}}
+        </div>
+    </script>
+    <script type="text/html" id="ficheTabIdentité">
+        <div class='fdptab' id='tIdentité'>
+            <table cellspacing="0" cellpadding="0">
+                <tr>
+                    <td width='50%'>
+                        <p class='fdpst'>Race et classe</p>
+                        <ul>
+                            <li><b>Race</b> : {{race}}</li>
+                            <li><b>Sexe</b> : {{sexe}}</li>
+                            <li><b>Catégorie de taille</b> : {{catTaille}}</li>
+                            <li><b>Classes</b> : {{classes}}</li>
+                            <li><b>Prédilection</b> : {{prédilection}}</li>
+                        </ul>
+                    </td>
+                    <td width="50%">
+                        <p class="fdpst">Personalité</p>
+                        <ul>
+                            <li><b>Religion</b> : {{religion}}</li>
+                            <li><b>Origine</b> : {{origine}}</li>
+                            <li><b>Alignement</b> : {{alignement}}</li>
+                            <li><b>Dextrie</b> : {{dextrie}}</li>
+                        </ul>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <p class="fdpst">Caractéristiques</p>
+                        <ul>
+                            {{#carac}}
+                            <li><b>{{nom}}</b> : <b>{{base}}</b> ({{modBase}}), actuellement <b>{{valeur}}</b> ({{modValeur}})</li>
+                            {{/carac}}
+                        </ul>
+                    </td>
+                    <td>
+                        <p class="fdpst">Description</p>
+                        <ul>
+                            <li><b>Âge</b> : {{age}}</li>
+                            <li><b>Poids</b> : {{poids}}</li>
+                            <li><b>Taille</b> : {{taille}}</li>
+                            <li><b>Yeux</b> : {{yeux}}</li>
+                            <li><b>Cheveux</b> : {{cheveux}}</li>
+                            <li><b>Peau</b> : {{peau}}</li>
+                        </ul>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2">
+                        <p class="fdpst">Notes</p>
+                        <p class="fdpta">{{{notes}}}</p>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </script>
+    <script type="text/html" id="ficheTabCombat">
+        <div class='fdptab' id='tCombat'>
+            <table cellspacing="0" cellpadding="0">
+                <tr>
+                    <td width="33%">
+                        <p class="fdpst">Exploration</p>
+                        <ul>
+                            <li><b>Initiative</b> : {{initiative}} = <span class="commpre">{{initmoddex}} Dex {{initdiv}} {{initnote}}</span></li>
+                            <li><b>VD</b> : {{vd}}</li>
+                            <li><b>Vision</b> : {{vision}}</li>
+                        </ul>
+                        <p class="fdpta">{{{notesexplo}}}</p>
+                    </td>
+                    <td width="33%">
+                        <p class="fdpst">Jets de Sauvegarde</p>
+                        <ul>
+                            {{#saveRef}}
+                            <li><b>{{nom}}</b> : {{val}} = <span class="commpre">{{base}} {{carac}} {{nomCarac}} {{div}} {{note}}</span></li>{{/saveRef}}
+                            {{#saveVig}}
+                            <li><b>{{nom}}</b> : {{val}} = <span class="commpre">{{base}} {{carac}} {{nomCarac}} {{div}} {{note}}</span></li>{{/saveVig}}
+                            {{#saveVol}}
+                            <li><b>{{nom}}</b> : {{val}} = <span class="commpre">{{base}} {{carac}} {{nomCarac}} {{div}} {{note}}</span></li>{{/saveVol}}
+                        </ul>
+                        <p class="fdpta">{{{notesjds}}}</p>
+                    </td>
+                    <td width="33%">
+                        <p class="fdpst">Points de vie</p>
+                        <ul>
+                            <li><b>pv actuels</b> : {{pv}}</li>
+                            <li><b>pv max</b> : {{pvmax}}</li>
+                            <li><b>Dg non létaux</b> : {{dgnl}}</li>
+                        </ul>
+                        <p class="fdpta">{{{notespv}}}</p>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <p class="fdpst">Valeurs de combat</p>
+                        <ul>
+                            <li><b>BBA</b> : {{bba}}</li>
+                            <li><b>BMO</b> : {{bmo}}</li>
+                            <li><b>DMD</b> : {{dmd}}</li>
+                            <li><b>CA</b> : {{ca}}</li>
+                            <li><b>CA contact</b> : {{cacontact}}</li>
+                            <li><b>CA surpris</b> : {{casurpris}}</li>
+                        </ul>
+                        <p class="fdpta">{{{notescombat}}}</p>
+                    </td>
+                    <td colspan="2">
+                        <p class="fdpst">Armes et modes d'attaque</p>
+                        <p class="fdpta">{{{armes}}}</p>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="3">
+                        <p class="fdpst">Notes</p>
+                        <p class="fdpta">{{{notescombat2}}}</p>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </script>
+    <script type="text/html" id="ficheTabCapacités">
+        <div class='fdptab' id='tCapacités'>
+            <table cellspacing="0" cellpadding="0">
+                <tr>
+                    <td width="50%">
+                        <p class='fdpst'>Traits et traits raciaux</p>
+                        <p class="fdpta">{{{traits}}}</p>
+                    </td>
+                    <td width="50%">
+                        <p class="fdpst">Compétences martiales</p>
+                        <p class="fdpta">{{{cpmartiales}}}</p>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <p class='fdpst'>Capacités de classe</p>
+                        <p class="fdpta">{{{capacités}}}</p>
+                    </td>
+                    <td width="50%">
+                        <p class="fdpst">Dons</p>
+                        <p class="fdpta">{{{dons}}}</p>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <p class='fdpst'>Langues</p>
+                        <p>{{languesList}}</p>
+                        <p class="fdpta">{{{langues}}}</p>
+                    </td>
+                    <td>
+                        <p class='fdpst'>Notes</p>
+                        <p class="fdpta">{{{notescapacités}}}</p>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </script>
+    <script type="text/html" id="ficheTabCompétences">
+        <div class="fdptab" id="tCompétences">
+            <table cellpadding="0" cellspacing="0">
+                <tr>
+                    <td colspan="2">
+                        <p class="fdpst">Compétences</p>
+                        <table class="tabcpt">
+                            <tr>
+                                <td width="50%">
+                                    <ul>
+                                        {{#comp1}}
+                                        <li>
+                                            <a href="{{{url}}}">{{{nom}}}</a> : {{{val}}}{{{comm}}}
+                                        </li>
+                                        {{/comp1}}
+                                    </ul>
+                                </td>
+                                <td width="50%">
+                                    <ul>
+                                        {{#comp2}}
+                                        <li>
+                                            <a href="{{{url}}}">{{{nom}}}</a> : {{{val}}}{{{comm}}}
+                                        </li>
+                                        {{/comp2}}
+                                    </ul>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td colspan="2"><i>* : appliquer la pénalité d'armure; (+x) : compétence non innée</i></td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2">
+                        <p class="fdpst">Notes</p>
+                        <p class="fdpta">{{{notes}}}</p>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </script>
+</head>
+<body>
+    <div>
+        <table cellspacing="0" cellpadding="0" class="tabletop">
+            <tr>
+                <td class="pic" rowspan="2"><div><img id="fdpwikipic" /></div></td>
+                <td colspan="3" class="header">
+                    <img class="cbut" id="bedit" title="Éditer" data-pic="bedit" data-act="viewer.fdp()" />
+                    <img class="cbut" id="bbalise" title="Balise" data-pic="bbalise" data-act="viewer.balise()" />
+                    <span id="fdpwikinom"></span>
+                </td>
+            </tr>
+            <tr style="padding: 3px 0">
+                <td style="width: 25%; padding: 0 6px 0 0; border-right: 1px solid #4b3124" id="fdpwikicol1"></td>
+                <td style="width: 15%; padding: 0 6px; border-right: 1px solid #4b3124" id="fdpwikicol2"></td>
+                <td style="width: 45%; padding: 0 6px;" id="fdpwikicol3"></td>
+            </tr>
+        </table>
+    </div>
+
+    <div id="tr_balise">
+        <table cellspacing="0" cellpadding="4" class="tabletop">
+            <tr>
+                <td>
+                    <input type="text" id="baltext" style="width: 100%" /><br />
+                    <table style="width: 100%">
+                        <tr>
+                            <td style="vertical-align:top">
+                                <input type="checkbox" id="ballienimage" checked />Lien sur l'image<br />
+                                <input type="checkbox" id="balaffichernom" checked />Nom du personnage<br />
+                                <input type="checkbox" id="balafficherpv" checked />Points de vie<br />
+                            </td>
+                            <td style="vertical-align:top">
+                                <input type="radio" name="balalign" id="balaligng" value="gauche" checked />Aligné à gauche<br />
+                                <input type="radio" name="balalign" id="balalignd" value="droite" />Aligné à droite<br />
+                            </td>
+                            <td style="vertical-align:top">
+                                <button id="balise_actualiser" onclick="fiche.balise_actualiser();">Actualiser</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <p>
+                        Couleur du nom : <input type="text" id="balcoulnom" /> sur <input type="text" id="balcoulsur" /><br />
+                        <em>Laisser vide pour les couleurs par défaut</em>
+                    </p>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div id="maintarget"></div>
+    <script>
+        $(document).ready(function () {
+            $("#tr_balise").hide()
+
+            viewer.initfdp();
+
+            viewer.affichewiki();
+
+            $(".cbut").each(function () {
+                viewer.initbutton(this, 20);
+            });
+        });
+    </script>
+
+</body>
+</html>

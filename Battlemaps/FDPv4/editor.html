@@ -1,0 +1,148 @@
+﻿<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf8" />
+    <title>Modification fiche de personnage</title>
+    <link href="editor.css?v=1" type="text/css" rel="stylesheet" />
+    <script type="text/javascript" src="http://code.jquery.com/jquery-1.9.1.js"></script>
+    <script type="text/javascript" src="ICanHaz.min.js"></script>
+    <script type="text/javascript" src="fdp.js?v=3"></script>
+
+    <script id="editorIdentTab" type="text/html">
+        <table class="full">
+            <tr>
+                <td colspan="3" class="bordered">
+                    <table class="full">
+                        <tr>
+                            <td><img id="idimg" src="" /></td>
+                            <td align='center'>
+                                <table class="full">
+                                    <tr><td>Nom</td><td><input id='idnom' type='text' size='38' /></td></tr>
+                                    <tr><td>Race/Ethnie</td><td><input id='idrace' type='text' size='38' /></td></tr>
+                                    <tr><td>Sexe</td><td><input id='idsexe' type='text' size='38' /></td></tr>
+                                    <tr>
+                                        <td>Ctg taille</td>
+                                        <td>
+                                            <select id='idctaille'>
+                                                <option>Colossal (C)</option>
+                                                <option>Gigantesque (Gig)</option>
+                                                <option>Très grand (TG)</option>
+                                                <option>Grand (G)</option>
+                                                <option>Moyen (M)</option>
+                                                <option>Petit (P)</option>
+                                                <option>Très Petit (TP)</option>
+                                                <option>Minuscule (Min)</option>
+                                                <option>Infime (I)</option>
+                                            </select>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                            <td align='right'>
+                                <table class="full">
+                                    <tr><td>Joueur</td><td><input id='idjoueur' type='text' size='38' /></td></tr>
+                                    <tr><td>MD</td><td><input id='idmd' type='text' size='38' /></td></tr>
+                                    <tr><td>Partie</td><td><input id='idpartie' type='text' size='38' /></td></tr>
+                                    <tr><td colspan='2' style='font-size:75%'><i>Cliquer sur l'image à gauche pour la modifier.</i></td></tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            <tr><td style="padding: 2px"></td></tr>
+            <tr>
+                <td width="66%" class="bordered">
+                    <table class="full">
+                        <tr><td>Classes & niveaux{{{classes}}}</td><td><input id='idclasses' type='text' size='60' /></td></tr>
+                        <tr><td>Cls de prédilection</td><td><input id='idcdp' type='text' size='60' /></td></tr>
+                        <tr><td padding='2px'></td></tr>
+                    </table>
+                    <table class="full">
+                        <tr style='vertical-align: top'>
+                            <td width='50%'>
+                                <table class="full">
+                                    <tr><td>Origine</td><td><input id='idorigine' type='text' size='25' /></td></tr>
+                                    <tr><td>Religion</td><td><input id='idreligion' type='text' size='25' /></td></tr>
+                                    <tr><td padding='3px'></td></tr>
+                                    <tr><td>Âge{{{age}}}</td><td><input id='idage' type='text' size='25' /></td></tr>
+                                    <tr><td>Poids{{{poids}}}</td><td><input id='idpoids' type='text' size='25' /></td></tr>
+                                    <tr><td>Taille{{{taille}}}</td><td><input id='idtaille' type='text' size='25' /></td></tr>
+                                </table>
+                            </td>
+                            <td width='50%'>
+                                <table class="full">
+                                    <tr><td>Alignement{{{alignement}}}</td><td><input id='idalign' type='text' size='25' /></td></tr>
+                                    <tr><td>Dextrie</td><td><input id='iddextrie' type='text' size='25' /></td></tr>
+                                    <tr><td padding='3px'></td></tr>
+                                    <tr><td>Yeux</td><td><input id='idyeux' type='text' size='25' /></td></tr>
+                                    <tr><td>Cheveux</td><td><input id='idcheveux' type='text' size='25' /></td></tr>
+                                    <tr><td>Peau</td><td><input id='idpeau' type='text' size='25' /></td></tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+                <td width='1%'></td>
+                <td width='33%' align='center' class="bordered">
+                    <table>
+                        <tr>
+                            <td></td>
+                            <td rowspan='13'>&nbsp;</td>
+                            <td align='center'>Base</td>
+                            <td></td>
+                            <td rowspan='13'>&nbsp;</td>
+                            <td align='center'>Actuel</td>
+                            <td></td>
+                        </tr>
+                        {{#stats}}
+                        <tr><td colspan='5' padding='1px'></td></tr>
+                        <tr>
+                            <td style='font-size: 100%'>{{abbr}}{{{wiki}}}</td>
+                            <td id='idbase{{{i}}}' align='center' style='font-size: 120%'></td>
+                            {{{bb}}}
+                            <td id='id{{{i}}}' align='center' style='font-size: 120%'></td>
+                            {{{b}}}
+                        </tr>
+                        {{/stats}}
+                    </table>
+                </td>
+            </tr>
+            <tr><td colspan='3'><i style='font-size: 85%'>Notes</i></td></tr>
+            <tr><td colspan='3'><textarea rows='18' {{{tastyle}}} id='idnoteidentité'></textarea></td></tr>
+        </table>
+    </script>
+</head>
+<body>
+    <div style='width:100%; height:100%; overflow:auto'>
+        <center style='background-color: #9e9083; border: 1px solid #4b3124'>
+            <table cellpadding="4">
+                <tr>
+                    <td><button type='button' id='bIdent'>Identité</button></td>
+                    <td><button type='button' id='bCombat'>Combat</button></td>
+                    <td><button type='button' id='bCapac'>Capacités</button></td>
+                    <td><button type='button' id='bComp'>Compétences</button></td>
+                    <td><button type='button' id='bMagie'>Magie</button></td>
+                    <td><button type='button' id='bEquip'>Équipement</button></td>
+                    <td><button type='button' id='bCompa'>Compagnon</button></td>
+                    <td><button type='button' id='bNotes'>Notes</button></td>
+                    <td><button type='button' id='bWiki'>Wiki</button></td>
+                    <td><button type='button' id='bCode'>Code</button></td>
+                </tr>
+            </table>
+            <div id="main" style='width:98%; background-color: white; margin: 4px'>
+            </div>
+        </center>
+    </div>
+    <script type="text/javascript">
+        $(document).ready(function () {
+            // TODO
+        });
+
+        function start(x_tabc, x_tafs, x_p)
+        {
+            fiche.initfdp(x_tabc, x_tafs, x_p);
+            fiche.start();
+        }
+    </script>
+</body>
+</html>

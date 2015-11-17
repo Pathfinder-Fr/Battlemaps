@@ -1,0 +1,215 @@
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1" />
+    <style>
+        .hdivlg, .vdivlg {
+            padding: 0;
+            margin: 0;
+            vertical-align: middle;
+        }
+
+
+        .vplg {
+            padding: 0;
+            margin: 0;
+        }
+    </style>
+
+    <script src="http://code.jquery.com/jquery-latest.min.js" type="text/javascript"></script>
+
+    <script style="text/javascript">
+
+        function loaded() {
+            main = window.opener;
+            if (main)
+                main.loaded(0);
+            else
+                init();
+        }
+
+        $(loaded);
+
+        function init() {
+            fcontrol = main.fcontrol;
+            creamap();
+        }
+
+        function creamap() {
+            /* Numérotation des cases dans les marges et contenu bmap */
+            var contenu = "";
+            for (var i = 0; i < main.battlemap.taillex ; i++) {
+                contenu += "<div class='hdivlg' id='ghoriz" + i + "' style='position: absolute; left: " + (i * 20 + 30) + "; top: 0'>";
+                contenu += "<p class='hplg' style='text-align: center; font-size: 11'>" + codeLettre(i) + "</p></div>";
+            }
+            for (var i = 0; i < main.battlemap.tailley ; i++) {
+                contenu += "<div class='vdivlg' id='gvert" + i + "' style='position: absolute; left: 0; top: " + (i * 20 + 30) + "'>";
+                contenu += "<p class='vplg' style='text-align: center; font-size: 11'>" + (i + 1) + "</p></div>";
+            }
+            contenu += "</div>";
+            $("#maindivbmap").append(contenu);
+            $("#imgbmap").css("z-index", "0");
+            $("#imgbmap").attr("src", main.battlemap.src);
+            main.zoom = calculeZoom();
+            main.opacgrille = 0.25;
+            affichebmap();
+        }
+
+        function affichebmap() {
+            if (main.grille) grilleAction();
+            $("#imgbmap").css("height", Math.floor(main.battlemap.tailley * main.zoom));
+            $("#imgbmap").css("width", Math.floor(main.battlemap.taillex * main.zoom));
+            for (var i = 0; i < main.battlemap.taillex ; i++) {
+                $("#ghoriz" + i).css("left", 30 + Math.floor(i * main.zoom));
+                $("#ghoriz" + i).css("width", Math.floor(main.zoom));
+                $("#ghoriz" + i).css("height", 30);
+            }
+            for (var i = 0; i < main.battlemap.tailley ; i++) {
+                $("#gvert" + i).css("top", 30 + Math.floor(i * main.zoom));
+                $("#gvert" + i).css("width", 30);
+                $("#gvert" + i).css("height", Math.floor(main.zoom));
+            }
+            for (var ei = 0; ei < main.battlemap.nzones; ei++) {
+                main.battlemap.zones[ei].installe();
+            }
+            for (var ei = 0; ei < main.battlemap.nelems; ei++) {
+                main.battlemap.elems[ei].installe();
+            }
+            for (var ei = 0; ei < main.battlemap.nobjets; ei++) {
+                main.battlemap.objets[ei].installe();
+            }
+        }
+
+        function ajustebmap(nsrc, ntaillex, ntailley) {
+            if (main.battlemap.taillex > ntaillex)
+                for (var i = ntaillex; i < main.battlemap.taillex ; i++)
+                    $("#ghoriz" + i).remove();
+            if (main.battlemap.tailley > ntailley)
+                for (var i = ntailley; i < main.battlemap.tailley ; i++)
+                    $("gvert" + i).remove();
+            if (main.battlemap.taillex < ntaillex)
+                for (var i = main.battlemap.taillex; i < ntaillex ; i++)
+                    $("#maindivbmap")
+                      .append("<div class='hdivlg' id='ghoriz" + i + "' style='position: absolute; left: " + (i * 20 + 30) + "; top: 0'>"
+                             + "   <p class='pdivlg' style='text-align: center; font-size: 11'>" + codeLettre(i) + "</p></div>");
+            if (main.battlemap.tailley < ntailley)
+                for (var i = main.battlemap.tailley; i < ntailley ; i++)
+                    $("#maindivbmap")
+                      .append("<div class='vdivlg' id='gvert" + i + "' style='position: absolute; top: " + (i * 20 + 30) + "; left: 0'>"
+                             + "   <p class='vplg' style='text-align: center; font-size: 11'>" + (i + 1) + "</p></div>");
+            $("#imgbmap").attr("src", nsrc);
+            main.battlemap.src = nsrc;
+            main.battlemap.taillex = ntaillex;
+            main.battlemap.tailley = ntailley;
+            main.zoom = calculeZoom();
+            affichebmap();
+        }
+
+        function grilleAction() {
+            var targetimg = fcontrol.$("#bgrille");
+            if (main.grille) {
+                targetimg.css("padding", "2px");
+                targetimg.css("border", "0");
+            } else {
+                targetimg.css("padding", "0px");
+                targetimg.css("border", "2px solid #e7dfc6");
+            }
+            if (main.grille) {
+                $(".grilletile").remove();
+                main.grille = false;
+                main.idxmvt = -1;
+                main.idxzmvt = -1;
+                main.idxomvt = -1;
+            } else {
+                for (var xi = 0; xi < main.battlemap.taillex; xi++) {
+                    for (var yi = 0; yi < main.battlemap.tailley; yi++) {
+                        $("#divbmap").append("<div id='grille" + xi + "sur" + yi + "' class='grilletile'></div>");
+                        var ndiv = $("#grille" + xi + "sur" + yi);
+                        ndiv.css("width", Math.floor(main.zoom));
+                        ndiv.css("height", Math.floor(main.zoom));
+                        ndiv.css("position", "absolute");
+                        ndiv.css("left", Math.floor(xi * main.zoom));
+                        ndiv.css("top", Math.floor(yi * main.zoom));
+                        if ((xi + yi) % 2 == 0) {
+                            ndiv.css("backgroundColor", "white");
+                        } else {
+                            ndiv.css("backgroundColor", "black");
+                        }
+                        ndiv.css("opacity", main.opacgrille);
+                        ndiv.css("z-Index", 100);
+                        ndiv.attr("title", codeLettre(xi) + (yi + 1));
+                        ndiv.click(new Function("clickgrille(" + xi + "," + yi + ");"));
+                    }
+                }
+                main.grille = true;
+            }
+        }
+
+
+        function clickgrille(nx, ny) {
+            if (main.idxmvt != -1) {
+                var currelem = main.battlemap.elems[main.idxmvt];
+                currelem.deplacevers(nx, ny);
+                main.idxmvt = -1;
+                grilleAction();
+            }
+            if (main.idxzmvt != -1) {
+                var currzone = main.battlemap.zones[main.idxzmvt];
+                currzone.deplacevers(nx, ny);
+                main.idxzmvt = -1;
+                grilleAction();
+            }
+            if (main.idxomvt != -1) {
+                var currobjet = main.battlemap.objets[main.idxomvt];
+                currobjet.deplacevers(nx, ny);
+                main.idxomvt = -1;
+                grilleAction();
+            }
+        }
+
+        function ajusteopacgrille() {
+            if (main.grille) {
+                $(".grilletile").css("opacity", main.opacgrille);
+            }
+        }
+
+        function calculeZoom() {
+            var wd = window.innerWidth;
+            var ht = window.innerHeight;
+            if (navigator.appName.indexOf("Microsoft") != -1) {
+                wd = document.body.offsetWidth;
+                ht = document.body.offsetHeight;
+            }
+            wd = (wd - 30) / (main.battlemap.taillex + 1);
+            ht = (ht - 30) / (main.battlemap.tailley + 1);
+            wd = Math.floor(wd);
+            ht = Math.floor(ht);
+            if ((wd > 0) && (ht > 0))
+                if (wd > ht)
+                    return ht;
+                else
+                    return wd;
+            else
+                return 20;
+        }
+
+        function codeLettre(i) {
+            if ((i >= 0) && (i < 26)) {
+                return (String.fromCharCode(65 + i));
+            } else if ((i > 25) && (i <= 675)) {
+                return (String.fromCharCode(64 + Math.floor(i / 26)) + String.fromCharCode(65 + (i % 26)));
+            } else {
+                return ("");
+            }
+        }
+
+    </script>
+
+</head>
+<body>
+
+    <div style='position: relative; left: 0; top: 0' id='maindivbmap'>
+        <div id='divbmap' style='position: absolute; left: 30; top: 30; background-color: blue'>
+            <img id='imgbmap' style='position: absolute; left: 0; top: 0' />
+        </div>
+
+</body>
+</html>

@@ -1,0 +1,133 @@
+﻿/* Sheet header */
+.tabletop {
+    width: 100%;
+    background-color: #f3efe2;
+    border: 1px solid #4b3124;
+    font-size: 11pt;
+    margin-bottom: 6px;
+}
+
+    /* Character picture */
+    .tabletop .pic {
+        width: 90px;
+    }
+
+        .tabletop .pic div {
+            width: 80px;
+            height: 80px;
+            margin: 4px 8px 4px 4px;
+            border: 1px solid #4b3124;
+            background-color: white;
+        }
+
+            .tabletop .pic div img {
+                width: 80px;
+                height: 80px;
+            }
+
+    /* Character header row */
+    .tabletop .header {
+        border-bottom: 1px solid #4b3124;
+        padding: 4px 4px 4px 0px;
+    }
+
+        /* Character toolbar buttons */
+        .tabletop .header img {
+            float: right;
+            padding: 4px;
+        }
+
+        /* Character name */
+        .tabletop .header span {
+            font-size: 150%;
+            font-weight: bold;
+        }
+
+#maintarget {
+    font-size: 10pt;
+}
+
+.ui-tabs-nav {
+    font-size: 10px;
+}
+
+.commpre {
+    color: gray;
+    font-style: italic;
+}
+
+.fdptab {
+    padding: 5px !important;
+    font-family: serif;
+}
+
+    .fdptab table {
+        width: 100%;
+        border-spacing: 5px;
+    }
+
+        .fdptab table.tabcpt {
+            border-spacing: 0;
+            border-collapse: collapse;
+            margin: 2px;
+        }
+
+    .fdptab tr {
+        vertical-align: top;
+    }
+
+    .fdptab td {
+        padding: 0px;
+        border: 1px solid #4b3124;
+        box-shadow: 2px 2px 1px #888;
+        font-size: 11pt;
+    }
+
+    .fdptab table.tabcpt td {
+        border: 0;
+        box-shadow: none;
+    }
+
+    .fdptab td p {
+        margin: 2px;
+    }
+
+        .fdptab td p.fdpta {
+            background-color: #EFEFEF;
+            padding: 3px;
+            font-family: monospace;
+            font-size: 8pt;
+            margin: 0;
+        }
+
+        .fdptab td p.fdpst {
+            border-bottom: 2px solid #4b3124;
+            background-color: #f3efe2;
+            padding: 3px;
+            margin: 0px;
+            font-size: 10pt;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+    .fdptab td ul {
+        padding-left: 18px;
+        margin-top: 5px;
+    }
+
+    .fdptab a {
+        color: blue;
+    }
+
+    .fdptab img.btntogglesortsindisponibles {
+        float: right;
+        padding-right: 3px;
+        padding-top: 3px;
+        width: 16px;
+        height: 16px;
+        opacity: .5;
+    }
+
+        .fdptab img.btntogglesortsindisponibles:hover {
+            opacity: 1;
+        }
